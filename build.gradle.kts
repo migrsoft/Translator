@@ -21,6 +21,8 @@ dependencies {
     implementation("com.formdev:flatlaf:3.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.8.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.google.code.gson:gson:2.10.1")
     testImplementation(kotlin("test"))
 }
 

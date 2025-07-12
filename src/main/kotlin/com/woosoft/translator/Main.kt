@@ -57,10 +57,14 @@ fun createAndShowGUI() {
     val fitToViewButton = JButton("Fit to View")
     val fitToWidthButton = JButton("Fit to Width")
     val actualSizeButton = JButton("Actual Size")
+    val getSelectedImageButton = JButton("Get Selected Image")
+    val ocrButton = JButton("OCR Selected Image")
 
     toolBar.add(fitToViewButton)
     toolBar.add(fitToWidthButton)
     toolBar.add(actualSizeButton)
+    toolBar.add(getSelectedImageButton)
+    toolBar.add(ocrButton)
 
     // Add action listener for Open menu item
     openMenuItem.addActionListener {
@@ -91,7 +95,7 @@ fun createAndShowGUI() {
                 val selectedIndex = fileList.selectedIndex
                 if (selectedIndex != -1) {
                     val selectedFile = selectedFilesList[selectedIndex]
-                    displayImage(selectedFile, ImageDisplayMode.FIT_TO_VIEW, imageDisplayScrollPane)
+                    displayImage(selectedFile, ImageDisplayMode.FIT_TO_WIDTH, imageDisplayScrollPane)
                 }
             }
         }
@@ -117,6 +121,30 @@ fun createAndShowGUI() {
         if (selectedIndex != -1) {
             val selectedFile = selectedFilesList[selectedIndex]
             displayImage(selectedFile, ImageDisplayMode.ACTUAL_SIZE, imageDisplayScrollPane)
+        }
+    }
+
+    getSelectedImageButton.addActionListener {
+        val selectedImage = getSelectedImageFromDisplay()
+        if (selectedImage != null) {
+            JOptionPane.showMessageDialog(frame, ImageIcon(selectedImage), "Selected Image", JOptionPane.PLAIN_MESSAGE)
+        } else {
+            JOptionPane.showMessageDialog(frame, "No image selected or selection is empty.", "No Selection", JOptionPane.INFORMATION_MESSAGE)
+        }
+    }
+
+    ocrButton.addActionListener {
+        val selectedImage = getSelectedImageFromDisplay()
+        if (selectedImage != null) {
+            val languages = listOf("grc")
+            val ocrResult = TesseractApi.ocrImage(selectedImage, mapOf("languages" to languages))
+            if (ocrResult != null) {
+                JOptionPane.showMessageDialog(frame, ocrResult, "OCR Result", JOptionPane.PLAIN_MESSAGE)
+            } else {
+                JOptionPane.showMessageDialog(frame, "OCR failed or returned no text.", "OCR Error", JOptionPane.ERROR_MESSAGE)
+            }
+        } else {
+            JOptionPane.showMessageDialog(frame, "No image selected for OCR.", "OCR Error", JOptionPane.INFORMATION_MESSAGE)
         }
     }
 
