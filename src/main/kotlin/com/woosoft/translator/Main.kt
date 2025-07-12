@@ -54,11 +54,17 @@ fun createAndShowGUI() {
 
     // Create the toolbar for image display modes
     val toolBar = JToolBar()
-    val fitToViewButton = JButton("Fit to View")
-    val fitToWidthButton = JButton("Fit to Width")
-    val actualSizeButton = JButton("Actual Size")
-    val getSelectedImageButton = JButton("Get Selected Image")
-    val ocrButton = JButton("OCR Selected Image")
+    toolBar.setFloatable(false)
+    val fitToViewButton = JButton(ImageIcon(object {}.javaClass.getResource("/icons/fit_to_view.png")))
+    fitToViewButton.toolTipText = "Fit to View"
+    val fitToWidthButton = JButton(ImageIcon(object {}.javaClass.getResource("/icons/fit_to_width.png")))
+    fitToWidthButton.toolTipText = "Fit to Width"
+    val actualSizeButton = JButton(ImageIcon(object {}.javaClass.getResource("/icons/actual_size.png")))
+    actualSizeButton.toolTipText = "Actual Size"
+    val getSelectedImageButton = JButton(ImageIcon(object {}.javaClass.getResource("/icons/get_selected_image.png")))
+    getSelectedImageButton.toolTipText = "Get Selected Image"
+    val ocrButton = JButton(ImageIcon(object {}.javaClass.getResource("/icons/ocr.png")))
+    ocrButton.toolTipText = "OCR Selected Image"
 
     toolBar.add(fitToViewButton)
     toolBar.add(fitToWidthButton)
