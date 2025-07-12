@@ -12,6 +12,7 @@ import java.awt.event.ComponentEvent
 
 private var lastOpenedDirectory: File? = null
 private val selectedFilesList = mutableListOf<File>()
+private var lastOcrResult: String? = null
 
 fun main() {
     SwingUtilities.invokeLater {
@@ -65,12 +66,16 @@ fun createAndShowGUI() {
     getSelectedImageButton.toolTipText = "Get Selected Image"
     val ocrButton = JButton(ImageIcon(object {}.javaClass.getResource("/icons/ocr.png")))
     ocrButton.toolTipText = "OCR Selected Image"
+    val translateButton = JButton(ImageIcon(object {}.javaClass.getResource("/icons/translate.png")))
+    translateButton.toolTipText = "Translate OCR Result"
 
     toolBar.add(fitToViewButton)
     toolBar.add(fitToWidthButton)
     toolBar.add(actualSizeButton)
+    toolBar.add(Box.createHorizontalStrut(20)) // Add a 20-pixel horizontal gap
     toolBar.add(getSelectedImageButton)
     toolBar.add(ocrButton)
+    toolBar.add(translateButton)
 
     // Add action listener for Open menu item
     openMenuItem.addActionListener {
@@ -144,10 +149,20 @@ fun createAndShowGUI() {
         if (selectedImage != null) {
             val languages = listOf("grc")
             val ocrResult = TesseractApi.ocrImage(selectedImage, mapOf("languages" to languages), 300)
+            lastOcrResult = ocrResult // Store the OCR result
             val ocrDialog = OcrResultDialog(frame, ocrResult ?: "")
             ocrDialog.isVisible = true
         } else {
             JOptionPane.showMessageDialog(frame, "No image selected for OCR.", "OCR Error", JOptionPane.INFORMATION_MESSAGE)
+        }
+    }
+
+    translateButton.addActionListener {
+        if (lastOcrResult != null && lastOcrResult!!.isNotBlank()) {
+            val translationDialog = TranslationDialog(frame, lastOcrResult!!)
+            translationDialog.isVisible = true
+        } else {
+            JOptionPane.showMessageDialog(frame, "No OCR result available for translation.", "Translation Error", JOptionPane.INFORMATION_MESSAGE)
         }
     }
 

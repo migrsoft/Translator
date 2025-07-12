@@ -39,7 +39,6 @@ object TesseractApi {
             client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     val jsonResponse = response.body?.string()
-                    println("Raw Tesseract API Response: $jsonResponse") // Debug print
                     if (jsonResponse != null) {
                         val ocrResult = gson.fromJson(jsonResponse, Map::class.java)
                         val data = ocrResult["data"] as? Map<*, *>
