@@ -13,6 +13,7 @@ import java.awt.event.ComponentEvent
 private var lastOpenedDirectory: File? = null
 private val selectedFilesList = mutableListOf<File>()
 private var lastOcrResult: String? = null
+var selectedOcrLanguageCode: String = "eng" // Default to English
 
 fun main() {
     SwingUtilities.invokeLater {
@@ -36,7 +37,34 @@ fun createAndShowGUI() {
 
     val editMenu = JMenu("Edit")
     editMenu.add(JMenuItem("Settings"))
+    val ocrLanguageMenu = JMenu("OCR Language")
+    editMenu.add(ocrLanguageMenu)
     menuBar.add(editMenu)
+
+    val ocrLanguages = mapOf(
+        "English" to "eng",
+        "Chinese" to "chs",
+        "Greek" to "grc"
+    )
+
+    val ocrLanguageButtonGroup = ButtonGroup()
+    ocrLanguages.forEach { (name, code) ->
+        val menuItem = JRadioButtonMenuItem(name)
+        menuItem.addActionListener {
+            selectedOcrLanguageCode = code
+        }
+        ocrLanguageButtonGroup.add(menuItem)
+        ocrLanguageMenu.add(menuItem)
+    }
+
+    // Set initial selection
+    ocrLanguages.entries.firstOrNull { it.value == selectedOcrLanguageCode }?.let { entry ->
+        ocrLanguageMenu.menuComponents.forEach { component ->
+            if (component is JRadioButtonMenuItem && component.text == entry.key) {
+                component.isSelected = true
+            }
+        }
+    }
 
     frame.jMenuBar = menuBar
 
