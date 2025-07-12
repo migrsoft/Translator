@@ -36,7 +36,7 @@ fun createAndShowGUI() {
     menuBar.add(fileMenu)
 
     val editMenu = JMenu("Edit")
-    editMenu.add(JMenuItem("Settings"))
+    
     val ocrLanguageMenu = JMenu("OCR Language")
     editMenu.add(ocrLanguageMenu)
     menuBar.add(editMenu)
