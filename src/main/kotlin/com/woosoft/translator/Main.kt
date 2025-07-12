@@ -32,7 +32,9 @@ fun createAndShowGUI() {
     val fileMenu = JMenu("File")
     val openMenuItem = JMenuItem("Open")
     fileMenu.add(openMenuItem)
-    fileMenu.add(JMenuItem("Exit"))
+    val exitMenuItem = JMenuItem("Exit")
+    exitMenuItem.addActionListener { System.exit(0) }
+    fileMenu.add(exitMenuItem)
     menuBar.add(fileMenu)
 
     val editMenu = JMenu("Edit")
