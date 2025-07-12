@@ -177,7 +177,7 @@ fun createAndShowGUI() {
     ocrButton.addActionListener {
         val selectedImage = getSelectedImageFromDisplay()
         if (selectedImage != null) {
-            val languages = listOf("grc")
+            val languages = listOf(selectedOcrLanguageCode)
             val ocrResult = TesseractApi.ocrImage(selectedImage, mapOf("languages" to languages), 300)
             lastOcrResult = ocrResult // Store the OCR result
             val ocrDialog = OcrResultDialog(frame, ocrResult ?: "")
