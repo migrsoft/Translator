@@ -144,11 +144,8 @@ fun createAndShowGUI() {
         if (selectedImage != null) {
             val languages = listOf("grc")
             val ocrResult = TesseractApi.ocrImage(selectedImage, mapOf("languages" to languages))
-            if (ocrResult != null) {
-                JOptionPane.showMessageDialog(frame, ocrResult, "OCR Result", JOptionPane.PLAIN_MESSAGE)
-            } else {
-                JOptionPane.showMessageDialog(frame, "OCR failed or returned no text.", "OCR Error", JOptionPane.ERROR_MESSAGE)
-            }
+            val ocrDialog = OcrResultDialog(frame, ocrResult ?: "")
+            ocrDialog.isVisible = true
         } else {
             JOptionPane.showMessageDialog(frame, "No image selected for OCR.", "OCR Error", JOptionPane.INFORMATION_MESSAGE)
         }
