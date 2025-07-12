@@ -13,7 +13,7 @@ object TesseractApi {
     private const val BASE_URL = "http://localhost:8884" // Assuming tesseract-server runs on localhost:8884
     private val gson = Gson()
 
-    fun ocrImage(image: BufferedImage, options: Map<String, Any>? = null): String? {
+    fun ocrImage(image: BufferedImage, options: Map<String, Any>? = null, dpi: Int? = null): String? {
         val stream = ByteArrayOutputStream()
         ImageIO.write(image, "png", stream)
         val imageBytes = stream.toByteArray()
@@ -23,8 +23,11 @@ object TesseractApi {
             .addFormDataPart("file", "image.png",
                 imageBytes.toRequestBody("image/png".toMediaTypeOrNull()))
 
-        options?.let {
-            requestBodyBuilder.addFormDataPart("options", null, gson.toJson(it).toRequestBody("application/json".toMediaTypeOrNull()))
+        val combinedOptions = options?.toMutableMap() ?: mutableMapOf()
+        dpi?.let { combinedOptions["dpi"] = it }
+
+        if (combinedOptions.isNotEmpty()) {
+            requestBodyBuilder.addFormDataPart("options", null, gson.toJson(combinedOptions).toRequestBody("application/json".toMediaTypeOrNull()))
         }
 
         val request = Request.Builder()
