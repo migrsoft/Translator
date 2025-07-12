@@ -21,17 +21,20 @@ class TranslationDialog(owner: JFrame, sourceText: String) : JDialog(owner, "Tra
         sourceTextArea.lineWrap = true
         sourceTextArea.wrapStyleWord = true
         sourceTextArea.isEditable = true
+        sourceTextArea.font = sourceTextArea.font.deriveFont(16f)
         val sourceScrollPane = JScrollPane(sourceTextArea)
 
         translatedTextArea = JTextArea()
         translatedTextArea.lineWrap = true
         translatedTextArea.wrapStyleWord = true
         translatedTextArea.isEditable = true
+        translatedTextArea.font = translatedTextArea.font.deriveFont(16f)
         val translatedScrollPane = JScrollPane(translatedTextArea)
 
         val splitPane = JSplitPane(JSplitPane.VERTICAL_SPLIT, sourceScrollPane, translatedScrollPane)
         splitPane.isContinuousLayout = true
         splitPane.setDividerLocation(0.5)
+        splitPane.setResizeWeight(0.5)
         add(splitPane, BorderLayout.CENTER)
 
         val translateButton = JButton("Translate")

@@ -16,6 +16,7 @@ class OcrResultDialog(owner: JFrame, ocrText: String) : JDialog(owner, "OCR Resu
         ocrTextArea.lineWrap = true
         ocrTextArea.wrapStyleWord = true
         ocrTextArea.isEditable = true
+        ocrTextArea.font = ocrTextArea.font.deriveFont(16f)
         val scrollPane = JScrollPane(ocrTextArea)
         add(scrollPane, BorderLayout.CENTER)
 
