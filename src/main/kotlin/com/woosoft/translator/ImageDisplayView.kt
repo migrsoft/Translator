@@ -40,6 +40,8 @@ fun displayImage(displayableImage: DisplayableImage?, mode: ImageDisplayMode, sc
         scrollPane.repaint()
         imagePanel.reScaleImage()
         imageSizeLabel.text = "${bufferedImage.width} x ${bufferedImage.height}"
+        scrollPane.horizontalScrollBar.value = 0
+        scrollPane.verticalScrollBar.value = 0
     } catch (e: Exception) {
         println("Error loading image: ${e.message}")
         imagePanel.setImage(null, mode) // Clear image on error
