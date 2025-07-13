@@ -5,6 +5,7 @@ import java.io.InputStream
 import javax.swing.JScrollPane
 import javax.imageio.ImageIO
 import java.awt.image.BufferedImage
+import javax.swing.JLabel
 
 private lateinit var imagePanel: ImagePanel
 private var currentDisplayableImage: DisplayableImage? = null
@@ -20,7 +21,7 @@ fun createImageDisplayView(): JScrollPane {
     return scrollPane
 }
 
-fun displayImage(displayableImage: DisplayableImage, mode: ImageDisplayMode, scrollPane: JScrollPane) {
+fun displayImage(displayableImage: DisplayableImage, mode: ImageDisplayMode, scrollPane: JScrollPane, imageSizeLabel: JLabel) {
     currentDisplayableImage = displayableImage
     currentDisplayMode = mode
 
@@ -30,6 +31,7 @@ fun displayImage(displayableImage: DisplayableImage, mode: ImageDisplayMode, scr
         scrollPane.revalidate()
         scrollPane.repaint()
         imagePanel.reScaleImage()
+        imageSizeLabel.text = "${bufferedImage.width} x ${bufferedImage.height}"
     } catch (e: Exception) {
         println("Error loading image: ${e.message}")
         imagePanel.setImage(null, mode) // Clear image on error
@@ -37,9 +39,9 @@ fun displayImage(displayableImage: DisplayableImage, mode: ImageDisplayMode, scr
     }
 }
 
-fun redrawCurrentImage(scrollPane: JScrollPane) {
+fun redrawCurrentImage(scrollPane: JScrollPane, imageSizeLabel: JLabel) {
     currentDisplayableImage?.let {
-        displayImage(it, currentDisplayMode, scrollPane)
+        displayImage(it, currentDisplayMode, scrollPane, imageSizeLabel)
     }
 }
 

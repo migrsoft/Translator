@@ -127,6 +127,9 @@ fun createAndShowGUI() {
     toolBar.add(getSelectedImageButton)
     toolBar.add(ocrButton)
     toolBar.add(translateButton)
+    toolBar.add(Box.createHorizontalGlue()) // Pushes everything to the left
+    val imageSizeLabel = JLabel("")
+    toolBar.add(imageSizeLabel)
 
     // Add action listener for Open menu item
     openMenuItem.addActionListener {
@@ -194,7 +197,7 @@ fun createAndShowGUI() {
 
                     if (selectedFilesList.isNotEmpty()) {
                         fileList.selectedIndex = 0 // Select the first image
-                        displayImage(selectedFilesList[0], ImageDisplayMode.FIT_TO_WIDTH, imageDisplayScrollPane)
+                        displayImage(selectedFilesList[0], ImageDisplayMode.FIT_TO_WIDTH, imageDisplayScrollPane, imageSizeLabel)
                     }
                     selectedCbzFile.parentFile?.let { lastOpenedDirectory = it }
                 } catch (e: Exception) {
@@ -212,7 +215,7 @@ fun createAndShowGUI() {
                 val selectedIndex = fileList.selectedIndex
                 if (selectedIndex != -1) {
                     val selectedDisplayableImage = selectedFilesList[selectedIndex]
-                    displayImage(selectedDisplayableImage, ImageDisplayMode.FIT_TO_WIDTH, imageDisplayScrollPane)
+                    displayImage(selectedDisplayableImage, ImageDisplayMode.FIT_TO_WIDTH, imageDisplayScrollPane, imageSizeLabel)
                 }
             }
         }
@@ -223,21 +226,21 @@ fun createAndShowGUI() {
         val selectedIndex = fileList.selectedIndex
         if (selectedIndex != -1) {
             val selectedDisplayableImage = selectedFilesList[selectedIndex]
-            displayImage(selectedDisplayableImage, ImageDisplayMode.FIT_TO_VIEW, imageDisplayScrollPane)
+            displayImage(selectedDisplayableImage, ImageDisplayMode.FIT_TO_VIEW, imageDisplayScrollPane, imageSizeLabel)
         }
     }
     fitToWidthButton.addActionListener { 
         val selectedIndex = fileList.selectedIndex
         if (selectedIndex != -1) {
             val selectedDisplayableImage = selectedFilesList[selectedIndex]
-            displayImage(selectedDisplayableImage, ImageDisplayMode.FIT_TO_WIDTH, imageDisplayScrollPane)
+            displayImage(selectedDisplayableImage, ImageDisplayMode.FIT_TO_WIDTH, imageDisplayScrollPane, imageSizeLabel)
         }
     }
     actualSizeButton.addActionListener { 
         val selectedIndex = fileList.selectedIndex
         if (selectedIndex != -1) {
             val selectedDisplayableImage = selectedFilesList[selectedIndex]
-            displayImage(selectedDisplayableImage, ImageDisplayMode.ACTUAL_SIZE, imageDisplayScrollPane)
+            displayImage(selectedDisplayableImage, ImageDisplayMode.ACTUAL_SIZE, imageDisplayScrollPane, imageSizeLabel)
         }
     }
 
@@ -275,7 +278,7 @@ fun createAndShowGUI() {
     // Add ComponentListener to imageDisplayScrollPane to handle resizing
     imageDisplayScrollPane.addComponentListener(object : ComponentAdapter() {
         override fun componentResized(e: ComponentEvent?) {
-            redrawCurrentImage(imageDisplayScrollPane)
+            redrawCurrentImage(imageDisplayScrollPane, imageSizeLabel)
         }
     })
 
