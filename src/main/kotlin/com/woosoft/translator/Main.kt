@@ -243,15 +243,22 @@ fun createAndShowGUI() {
                                     val newFile = File(originalFile.parentFile, newFileName)
                                     if (originalFile.renameTo(newFile)) {
                                         println("Renamed ${originalFile.name} to ${newFile.name}")
-                                        // Update the fileListModel and selectedFilesList
-                                        val oldName = fileListModel.getElementAt(selectedIndices[i])
-                                        val newLocalFileImage = LocalFileImage(newFile)
-                                        fileListModel.setElementAt(newLocalFileImage.name, selectedIndices[i])
-                                        selectedFilesList[selectedIndices[i]] = newLocalFileImage
+                                        // Update the selectedFilesList
+                                        selectedFilesList[selectedIndices[i]] = LocalFileImage(newFile)
                                     } else {
                                         JOptionPane.showMessageDialog(frame, "Failed to rename ${originalFile.name}", "Rename Error", JOptionPane.ERROR_MESSAGE)
                                     }
                                     currentNumber++
+                                }
+                                // After renaming, clear and re-add all items to resort
+                                fileListModel.clear()
+                                selectedFilesList.sortBy { it.name }
+                                selectedFilesList.forEach {
+                                    fileListModel.addElement(it.name)
+                                }
+                                // Re-select the first renamed file if any were renamed
+                                if (selectedFilesList.isNotEmpty()) {
+                                    fileList.selectedIndex = 0
                                 }
                             }
                             renameDialog.isVisible = true
