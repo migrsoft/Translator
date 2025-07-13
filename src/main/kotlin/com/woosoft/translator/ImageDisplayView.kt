@@ -9,6 +9,7 @@ import javax.swing.JLabel
 
 private lateinit var imagePanel: ImagePanel
 private var currentDisplayableImage: DisplayableImage? = null
+private var currentBufferedImage: BufferedImage? = null
 private var currentDisplayMode: ImageDisplayMode = ImageDisplayMode.FIT_TO_VIEW
 
 fun createImageDisplayView(): JScrollPane {
@@ -22,6 +23,9 @@ fun createImageDisplayView(): JScrollPane {
 }
 
 fun displayImage(displayableImage: DisplayableImage?, mode: ImageDisplayMode, scrollPane: JScrollPane, imageSizeLabel: JLabel) {
+    if (currentDisplayableImage != displayableImage) {
+        currentBufferedImage = null
+    }
     currentDisplayableImage = displayableImage
     currentDisplayMode = mode
 
@@ -34,12 +38,13 @@ fun displayImage(displayableImage: DisplayableImage?, mode: ImageDisplayMode, sc
     }
 
     try {
-        val bufferedImage: BufferedImage = ImageIO.read(displayableImage.getInputStream())
-        imagePanel.setImage(bufferedImage as Image, mode)
+        if (currentBufferedImage == null) {
+            currentBufferedImage = ImageIO.read(displayableImage.getInputStream())
+        }
+        imagePanel.setImage(currentBufferedImage, mode)
         scrollPane.revalidate()
         scrollPane.repaint()
-        imagePanel.reScaleImage()
-        imageSizeLabel.text = "${bufferedImage.width} x ${bufferedImage.height}"
+        imageSizeLabel.text = "${currentBufferedImage!!.width} x ${currentBufferedImage!!.height}"
         scrollPane.horizontalScrollBar.value = 0
         scrollPane.verticalScrollBar.value = 0
     } catch (e: Exception) {

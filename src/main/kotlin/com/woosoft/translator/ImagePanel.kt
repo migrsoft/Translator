@@ -1,6 +1,9 @@
 package com.woosoft.translator
 
 import java.awt.*
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
+
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionAdapter
@@ -19,6 +22,7 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
     private var originalImage: Image? = null
     private var scaledImage: Image? = null
     private var currentDisplayMode: ImageDisplayMode = ImageDisplayMode.FIT_TO_VIEW
+    private var scale: Double = 1.0
 
     private var selectionRect: Rectangle? = null
     private var startPoint: Point? = null
@@ -30,30 +34,32 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
     private val EDGE_TOLERANCE = 5
 
     init {
+        addComponentListener(object : ComponentAdapter() {
+            override fun componentResized(e: ComponentEvent?) {
+                scaleImage()
+                repaint()
+            }
+        })
+
         addMouseListener(object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
                 if (originalImage == null) return
 
-                val imageBounds = getImageBounds()
-                if (imageBounds == null || !imageBounds.contains(e.point)) {
-                    selectionRect = null
-                    repaint()
-                    return
-                }
+                val imagePoint = toOriginalImagePoint(e.point)
 
                 if (selectionRect != null) {
-                    resizingEdge = getResizingEdge(e.point)
+                    resizingEdge = getResizingEdge(imagePoint)
                     if (resizingEdge != -1) {
-                        startPoint = e.point
-                    } else if (selectionRect!!.contains(e.point)) {
+                        startPoint = imagePoint
+                    } else if (selectionRect!!.contains(imagePoint)) {
                         isMoving = true
-                        lastMousePoint = e.point
+                        lastMousePoint = imagePoint
                     } else {
                         selectionRect = null // Clicked outside existing selection
-                        startPoint = e.point
+                        startPoint = imagePoint
                     }
                 } else {
-                    startPoint = e.point
+                    startPoint = imagePoint
                 }
                 repaint()
             }
@@ -71,19 +77,21 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
             override fun mouseDragged(e: MouseEvent) {
                 if (originalImage == null) return
 
+                val imagePoint = toOriginalImagePoint(e.point)
+
                 if (resizingEdge != -1 && selectionRect != null) {
-                    resizeSelection(e.point)
+                    resizeSelection(imagePoint)
                 } else if (isMoving && selectionRect != null && lastMousePoint != null) {
-                    val dx = e.x - lastMousePoint!!.x
-                    val dy = e.y - lastMousePoint!!.y
+                    val dx = imagePoint.x - lastMousePoint!!.x
+                    val dy = imagePoint.y - lastMousePoint!!.y
                     selectionRect!!.translate(dx, dy)
-                    lastMousePoint = e.point
+                    lastMousePoint = imagePoint
                     constrainSelectionToImageBounds()
                 } else if (startPoint != null) {
-                    val x = Math.min(startPoint!!.x, e.x)
-                    val y = Math.min(startPoint!!.y, e.y)
-                    val width = Math.abs(e.x - startPoint!!.x)
-                    val height = Math.abs(e.y - startPoint!!.y)
+                    val x = Math.min(startPoint!!.x, imagePoint.x)
+                    val y = Math.min(startPoint!!.y, imagePoint.y)
+                    val width = Math.abs(imagePoint.x - startPoint!!.x)
+                    val height = Math.abs(imagePoint.y - startPoint!!.y)
 
                     selectionRect = Rectangle(x, y, width, height)
                     constrainSelectionToImageBounds()
@@ -93,7 +101,8 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
 
             override fun mouseMoved(e: MouseEvent) {
                 if (selectionRect != null) {
-                    cursor = getResizingCursor(e.point)
+                    val imagePoint = toOriginalImagePoint(e.point)
+                    cursor = getResizingCursor(imagePoint)
                 } else {
                     cursor = Cursor.getDefaultCursor()
                 }
@@ -102,6 +111,9 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
     }
 
     fun setImage(image: Image?, mode: ImageDisplayMode) {
+        if (originalImage !== image) {
+            selectionRect = null
+        }
         originalImage = image
         currentDisplayMode = mode
         scaleImage()
@@ -111,28 +123,10 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
     fun getSelectedImage(): BufferedImage? {
         if (originalImage == null || selectionRect == null) return null
 
-        val imageX = (width - scaledImage!!.getWidth(null)) / 2
-        val imageY = (height - scaledImage!!.getHeight(null)) / 2
-
-        val selectionX = selectionRect!!.x - imageX
-        val selectionY = selectionRect!!.y - imageY
-        val selectionWidth = selectionRect!!.width
-        val selectionHeight = selectionRect!!.height
-
-        // Convert selection coordinates from scaled image to original image
-        val scaleX = originalImage!!.getWidth(null).toDouble() / scaledImage!!.getWidth(null)
-        val scaleY = originalImage!!.getHeight(null).toDouble() / scaledImage!!.getHeight(null)
-
-        val originalSelectionX = (selectionX * scaleX).toInt()
-        val originalSelectionY = (selectionY * scaleY).toInt()
-        val originalSelectionWidth = (selectionWidth * scaleX).toInt()
-        val originalSelectionHeight = (selectionHeight * scaleY).toInt()
-
-        // Ensure the selection is within the original image bounds
-        val croppedX = Math.max(0, originalSelectionX)
-        val croppedY = Math.max(0, originalSelectionY)
-        val croppedWidth = Math.min(originalSelectionWidth, originalImage!!.getWidth(null) - croppedX)
-        val croppedHeight = Math.min(originalSelectionHeight, originalImage!!.getHeight(null) - croppedY)
+        val croppedX = Math.max(0, selectionRect!!.x)
+        val croppedY = Math.max(0, selectionRect!!.y)
+        val croppedWidth = Math.min(selectionRect!!.width, originalImage!!.getWidth(null) - croppedX)
+        val croppedHeight = Math.min(selectionRect!!.height, originalImage!!.getHeight(null) - croppedY)
 
         if (croppedWidth <= 0 || croppedHeight <= 0) return null
 
@@ -150,21 +144,27 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
         scaledImage?.let {
-            val x = (width - it.getWidth(null)) / 2
-            val y = (height - it.getHeight(null)) / 2
-            g.drawImage(it, x, y, this)
-        }
+            val imageX = (width - it.getWidth(null)) / 2
+            val imageY = (height - it.getHeight(null)) / 2
+            g.drawImage(it, imageX, imageY, this)
 
-        selectionRect?.let {
-            g.color = Color.RED
-            (g as Graphics2D).stroke = BasicStroke(2f)
-            g.drawRect(it.x, it.y, it.width, it.height)
+            selectionRect?.let {
+                g.color = Color.RED
+                (g as Graphics2D).stroke = BasicStroke(2f)
+                val drawRect = Rectangle(
+                    (it.x * scale).toInt() + imageX,
+                    (it.y * scale).toInt() + imageY,
+                    (it.width * scale).toInt(),
+                    (it.height * scale).toInt()
+                )
+                g.drawRect(drawRect.x, drawRect.y, drawRect.width, drawRect.height)
 
-            // Draw resize handles
-            g.fillRect(it.x - RESIZE_HANDLE_SIZE / 2, it.y - RESIZE_HANDLE_SIZE / 2, RESIZE_HANDLE_SIZE, RESIZE_HANDLE_SIZE) // Top-left
-            g.fillRect(it.x + it.width - RESIZE_HANDLE_SIZE / 2, it.y - RESIZE_HANDLE_SIZE / 2, RESIZE_HANDLE_SIZE, RESIZE_HANDLE_SIZE) // Top-right
-            g.fillRect(it.x - RESIZE_HANDLE_SIZE / 2, it.y + it.height - RESIZE_HANDLE_SIZE / 2, RESIZE_HANDLE_SIZE, RESIZE_HANDLE_SIZE) // Bottom-left
-            g.fillRect(it.x + it.width - RESIZE_HANDLE_SIZE / 2, it.y + it.height - RESIZE_HANDLE_SIZE / 2, RESIZE_HANDLE_SIZE, RESIZE_HANDLE_SIZE) // Bottom-right
+                // Draw resize handles
+                g.fillRect(drawRect.x - RESIZE_HANDLE_SIZE / 2, drawRect.y - RESIZE_HANDLE_SIZE / 2, RESIZE_HANDLE_SIZE, RESIZE_HANDLE_SIZE) // Top-left
+                g.fillRect(drawRect.x + drawRect.width - RESIZE_HANDLE_SIZE / 2, drawRect.y - RESIZE_HANDLE_SIZE / 2, RESIZE_HANDLE_SIZE, RESIZE_HANDLE_SIZE) // Top-right
+                g.fillRect(drawRect.x - RESIZE_HANDLE_SIZE / 2, drawRect.y + drawRect.height - RESIZE_HANDLE_SIZE / 2, RESIZE_HANDLE_SIZE, RESIZE_HANDLE_SIZE) // Bottom-left
+                g.fillRect(drawRect.x + drawRect.width - RESIZE_HANDLE_SIZE / 2, drawRect.y + drawRect.height - RESIZE_HANDLE_SIZE / 2, RESIZE_HANDLE_SIZE, RESIZE_HANDLE_SIZE) // Bottom-right
+            }
         }
     }
 
@@ -177,44 +177,38 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
             val panelWidth = scrollPane.viewport.width
             val panelHeight = scrollPane.viewport.height
 
-            scaledImage = when (currentDisplayMode) {
-                ImageDisplayMode.ACTUAL_SIZE -> it
+            when (currentDisplayMode) {
+                ImageDisplayMode.ACTUAL_SIZE -> {
+                    scaledImage = it
+                    scale = 1.0
+                }
                 ImageDisplayMode.FIT_TO_WIDTH -> {
                     if (panelWidth > 0 && it.getWidth(null) > 0) {
-                        val newHeight = (it.getHeight(null) * panelWidth.toDouble() / it.getWidth(null)).toInt()
-                        it.getScaledInstance(panelWidth, newHeight, Image.SCALE_SMOOTH)
+                        scale = panelWidth.toDouble() / it.getWidth(null)
+                        val newHeight = (it.getHeight(null) * scale).toInt()
+                        scaledImage = it.getScaledInstance(panelWidth, newHeight, Image.SCALE_SMOOTH)
                     } else {
-                        it
+                        scaledImage = it
+                        scale = 1.0
                     }
                 }
                 ImageDisplayMode.FIT_TO_VIEW -> {
                     if (panelWidth > 0 && panelHeight > 0 && it.getWidth(null) > 0 && it.getHeight(null) > 0) {
-                        val imageWidth = it.getWidth(null)
-                        val imageHeight = it.getHeight(null)
+                        val scaleX = panelWidth.toDouble() / it.getWidth(null)
+                        val scaleY = panelHeight.toDouble() / it.getHeight(null)
+                        scale = Math.min(scaleX, scaleY)
 
-                        val scaleX = panelWidth.toDouble() / imageWidth
-                        val scaleY = panelHeight.toDouble() / imageHeight
-                        val scale = Math.min(scaleX, scaleY)
-
-                        val newWidth = (imageWidth * scale).toInt()
-                        val newHeight = (imageHeight * scale).toInt()
-                        it.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH)
+                        val newWidth = (it.getWidth(null) * scale).toInt()
+                        val newHeight = (it.getHeight(null) * scale).toInt()
+                        scaledImage = it.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH)
                     } else {
-                        it
+                        scaledImage = it
+                        scale = 1.0
                     }
                 }
             }
             revalidate()
         }
-    }
-
-    private fun getImageBounds(): Rectangle? {
-        scaledImage?.let {
-            val x = (width - it.getWidth(null)) / 2
-            val y = (height - it.getHeight(null)) / 2
-            return Rectangle(x, y, it.getWidth(null), it.getHeight(null))
-        }
-        return null
     }
 
     private fun getResizingEdge(p: Point): Int {
@@ -315,14 +309,20 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
 
     private fun constrainSelectionToImageBounds() {
         selectionRect?.let {
-            val imageBounds = getImageBounds() ?: return
-            val intersection = imageBounds.intersection(it)
-            selectionRect = intersection
+            originalImage?.let {
+                val imageBounds = Rectangle(0, 0, it.getWidth(null), it.getHeight(null))
+                val intersection = imageBounds.intersection(selectionRect!!)
+                selectionRect = intersection
+            }
         }
     }
 
-    fun reScaleImage() {
-        scaleImage()
-        repaint()
+    private fun toOriginalImagePoint(p: Point): Point {
+        scaledImage?.let {
+            val imageX = (width - it.getWidth(null)) / 2
+            val imageY = (height - it.getHeight(null)) / 2
+            return Point(((p.x - imageX) / scale).toInt(), ((p.y - imageY) / scale).toInt())
+        }
+        return p
     }
 }
