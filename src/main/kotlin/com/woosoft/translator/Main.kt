@@ -226,7 +226,7 @@ fun createAndShowGUI() {
         override fun mousePressed(e: java.awt.event.MouseEvent) {
             if (SwingUtilities.isRightMouseButton(e)) {
                 val selectedIndices = fileList.selectedIndices
-                if (selectedIndices.size > 1) {
+                if (selectedIndices.isNotEmpty()) {
                     val allLocalFiles = selectedIndices.all { selectedFilesList[it] is LocalFileImage }
                     if (allLocalFiles) {
                         val popupMenu = JPopupMenu()
