@@ -3,19 +3,16 @@ package com.woosoft.translator
 import java.awt.*
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
-
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionAdapter
 import java.awt.image.BufferedImage
 import javax.swing.JPanel
 import javax.swing.JScrollPane
-
-enum class ImageDisplayMode {
-    FIT_TO_VIEW,
-    FIT_TO_WIDTH,
-    ACTUAL_SIZE
-}
+import javax.swing.SwingUtilities
+import javax.swing.JFrame
+import javax.swing.JPopupMenu
+import javax.swing.JMenuItem
 
 class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
 
@@ -24,7 +21,9 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
     private var currentDisplayMode: ImageDisplayMode = ImageDisplayMode.FIT_TO_VIEW
     private var scale: Double = 1.0
 
-    private var selectionRect: Rectangle? = null
+    var selectionRect: Rectangle? = null
+    private val subtitles: MutableList<SubtitleEntry> = mutableListOf()
+    private var selectedSubtitle: SubtitleEntry? = null
     private var startPoint: Point? = null
     private var resizingEdge: Int = -1 // -1: none, 0: top-left, 1: top-right, 2: bottom-left, 3: bottom-right, 4: top, 5: right, 6: bottom, 7: left
     private var isMoving: Boolean = false
@@ -47,19 +46,52 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
 
                 val imagePoint = toOriginalImagePoint(e.point)
 
-                if (selectionRect != null) {
-                    resizingEdge = getResizingEdge(imagePoint)
-                    if (resizingEdge != -1) {
-                        startPoint = imagePoint
-                    } else if (selectionRect!!.contains(imagePoint)) {
-                        isMoving = true
-                        lastMousePoint = imagePoint
+                val clickedSubtitle = subtitles.find { it.bounds.contains(imagePoint) }
+
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    if (clickedSubtitle != null) {
+                        selectedSubtitle = clickedSubtitle
+                        selectionRect = clickedSubtitle.bounds // Select the subtitle's bounds
+                        val popupMenu = JPopupMenu()
+                        val editMenuItem = JMenuItem("Edit Subtitle")
+                        editMenuItem.addActionListener {
+                            val topFrame = SwingUtilities.getWindowAncestor(this@ImagePanel)
+                            if (topFrame is JFrame) {
+                                val frameOwner = topFrame as JFrame
+                                val dialog = SubtitleEditDialog(frameOwner, clickedSubtitle.text) { newText ->
+                                    val index = subtitles.indexOf(clickedSubtitle)
+                                    if (index != -1) {
+                                        subtitles[index] = clickedSubtitle.copy(text = newText)
+                                        repaint()
+                                    }
+                                }
+                                dialog.isVisible = true
+                            }
+                        }
+                        popupMenu.add(editMenuItem)
+                        popupMenu.show(e.component, e.x, e.y)
+                    }
+                } else { // Left-click or other mouse button
+                    if (clickedSubtitle != null) {
+                        // Only select the subtitle, do not open the dialog
+                        selectedSubtitle = clickedSubtitle
+                        selectionRect = clickedSubtitle.bounds
+                        startPoint = null // Ensure no new selection is started
+                    } else if (selectionRect != null) {
+                        resizingEdge = getResizingEdge(imagePoint)
+                        if (resizingEdge != -1) {
+                            startPoint = imagePoint
+                        } else if (selectionRect!!.contains(imagePoint)) {
+                            isMoving = true
+                            lastMousePoint = imagePoint
+                        } else {
+                            selectionRect = null // Clicked outside existing selection
+                            startPoint = imagePoint
+                        }
                     } else {
-                        selectionRect = null // Clicked outside existing selection
+                        selectionRect = null // Clear selection if clicked outside
                         startPoint = imagePoint
                     }
-                } else {
-                    startPoint = imagePoint
                 }
                 repaint()
             }
@@ -113,6 +145,7 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
     fun setImage(image: Image?, mode: ImageDisplayMode) {
         if (originalImage !== image) {
             selectionRect = null
+            subtitles.clear() // Clear subtitles when a new image is loaded
         }
         originalImage = image
         currentDisplayMode = mode
@@ -164,6 +197,21 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
                 g.fillRect(drawRect.x + drawRect.width - RESIZE_HANDLE_SIZE / 2, drawRect.y - RESIZE_HANDLE_SIZE / 2, RESIZE_HANDLE_SIZE, RESIZE_HANDLE_SIZE) // Top-right
                 g.fillRect(drawRect.x - RESIZE_HANDLE_SIZE / 2, drawRect.y + drawRect.height - RESIZE_HANDLE_SIZE / 2, RESIZE_HANDLE_SIZE, RESIZE_HANDLE_SIZE) // Bottom-left
                 g.fillRect(drawRect.x + drawRect.width - RESIZE_HANDLE_SIZE / 2, drawRect.y + drawRect.height - RESIZE_HANDLE_SIZE / 2, RESIZE_HANDLE_SIZE, RESIZE_HANDLE_SIZE) // Bottom-right
+            }
+
+            // Draw subtitles
+            g.color = Color.BLUE // Subtitle color
+            g.font = Font("Arial", Font.BOLD, (16 * scale).toInt().coerceAtLeast(1)) // Scale font size
+            for (subtitle in subtitles) {
+                val drawRect = Rectangle(
+                    (subtitle.bounds.x * scale).toInt() + imageX,
+                    (subtitle.bounds.y * scale).toInt() + imageY,
+                    (subtitle.bounds.width * scale).toInt(),
+                    (subtitle.bounds.height * scale).toInt()
+                )
+                g.drawString(subtitle.text, drawRect.x, drawRect.y + drawRect.height) // Draw text at bottom of bounding box
+                (g as Graphics2D).stroke = BasicStroke(1f)
+                g.drawRect(drawRect.x, drawRect.y, drawRect.width, drawRect.height) // Draw bounding box
             }
         }
     }
@@ -315,6 +363,11 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
                 selectionRect = intersection
             }
         }
+    }
+
+    fun addSubtitle(subtitle: SubtitleEntry) {
+        subtitles.add(subtitle)
+        repaint()
     }
 
     private fun toOriginalImagePoint(p: Point): Point {

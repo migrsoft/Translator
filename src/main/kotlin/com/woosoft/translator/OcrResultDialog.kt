@@ -20,20 +20,7 @@ class OcrResultDialog(owner: JFrame, ocrText: String) : JDialog(owner, "OCR Resu
         val scrollPane = JScrollPane(ocrTextArea)
         add(scrollPane, BorderLayout.CENTER)
 
-        val translateButton = JButton("Translate")
-        translateButton.addActionListener {
-            val textToTranslate = ocrTextArea.text
-            if (textToTranslate.isNotBlank()) {
-                val translationDialog = TranslationDialog(owner, textToTranslate)
-                translationDialog.setLocationRelativeTo(this)
-                translationDialog.isVisible = true
-            } else {
-                JOptionPane.showMessageDialog(this, "No text to translate.", "Translation", JOptionPane.INFORMATION_MESSAGE)
-            }
-        }
-        val buttonPanel = JPanel()
-        buttonPanel.add(translateButton)
-        add(buttonPanel, BorderLayout.SOUTH)
+        
 
         pack()
         setLocationRelativeTo(owner)

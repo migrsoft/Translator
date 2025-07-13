@@ -8,7 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.swing.Swing
 
-class TranslationDialog(owner: JFrame, sourceText: String) : JDialog(owner, "Translation", true) {
+class TranslationDialog(owner: JFrame, sourceText: String, private val sourceLanguageCode: String, private val saveCallback: (String) -> Unit) : JDialog(owner, "Translation", true) {
 
     private val sourceTextArea: JTextArea
     private val translatedTextArea: JTextArea
@@ -46,16 +46,22 @@ class TranslationDialog(owner: JFrame, sourceText: String) : JDialog(owner, "Tra
         val targetLanguageComboBox = JComboBox(targetLanguages.keys.toTypedArray())
         targetLanguageComboBox.selectedItem = "English" // Default selection
 
+        val tesseractToLibreTranslateMap = mapOf(
+            "eng" to "en",
+            "chs" to "zh",
+            "grc" to "el"
+        )
+
         val translateButton = JButton("Translate")
         translateButton.addActionListener {
             val textToTranslate = sourceTextArea.text
             val selectedLanguageName = targetLanguageComboBox.selectedItem as String
             val targetLanguageCode = targetLanguages[selectedLanguageName] ?: "en" // Default to English
+            val libreTranslateSourceLanguageCode = tesseractToLibreTranslateMap[sourceLanguageCode] ?: "en" // Default to English
 
             if (textToTranslate.isNotBlank()) {
                 CoroutineScope(Dispatchers.Swing).launch {
-                    // Assuming source language is Greek (grc) for now
-                    val translatedText = LibreTranslateApi.translate(textToTranslate, "el", targetLanguageCode)
+                    val translatedText = LibreTranslateApi.translate(textToTranslate, libreTranslateSourceLanguageCode, targetLanguageCode)
                     if (translatedText != null) {
                         translatedTextArea.text = translatedText
                     } else {
@@ -66,9 +72,16 @@ class TranslationDialog(owner: JFrame, sourceText: String) : JDialog(owner, "Tra
                 translatedTextArea.text = "No text to translate."
             }
         }
+        val saveButton = JButton("Save")
+        saveButton.addActionListener {
+            saveCallback(translatedTextArea.text)
+            dispose() // Close the dialog after saving
+        }
+
         val buttonPanel = JPanel()
         buttonPanel.add(targetLanguageComboBox)
         buttonPanel.add(translateButton)
+        buttonPanel.add(saveButton)
         add(buttonPanel, BorderLayout.SOUTH)
 
         pack()

@@ -61,3 +61,7 @@ fun redrawCurrentImage(scrollPane: JScrollPane, imageSizeLabel: JLabel) {
 fun getSelectedImageFromDisplay(): BufferedImage? {
     return imagePanel.getSelectedImage()
 }
+
+fun getImagePanel(): ImagePanel {
+    return imagePanel
+}

@@ -355,8 +355,16 @@ fun createAndShowGUI() {
 
     translateButton.addActionListener {
         if (lastOcrResult != null && lastOcrResult!!.isNotBlank()) {
-            val translationDialog = TranslationDialog(frame, lastOcrResult!!)
-            translationDialog.isVisible = true
+            val currentSelection = getImagePanel().selectionRect // Assuming imagePanel has a public getter for selectionRect
+            if (currentSelection != null) {
+                val translationDialog = TranslationDialog(frame, lastOcrResult!!, selectedOcrLanguageCode) {
+                    translatedText ->
+                    getImagePanel().addSubtitle(SubtitleEntry(translatedText, currentSelection))
+                }
+                translationDialog.isVisible = true
+            } else {
+                JOptionPane.showMessageDialog(frame, "No selection box available to save subtitle.", "Translation Error", JOptionPane.INFORMATION_MESSAGE)
+            }
         } else {
             JOptionPane.showMessageDialog(frame, "No OCR result available for translation.", "Translation Error", JOptionPane.INFORMATION_MESSAGE)
         }
