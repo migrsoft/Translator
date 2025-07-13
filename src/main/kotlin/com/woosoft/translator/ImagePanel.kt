@@ -71,32 +71,56 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
                         popupMenu.add(editMenuItem)
                         popupMenu.show(e.component, e.x, e.y)
                     }
-                } else { // Left-click or other mouse button
+                } else { // Left-click
                     if (clickedSubtitle != null) {
-                        // Only select the subtitle, do not open the dialog
+                        // A subtitle was clicked, activate it and set selectionRect to its bounds
                         selectedSubtitle = clickedSubtitle
                         selectionRect = clickedSubtitle.bounds
-                        startPoint = null // Ensure no new selection is started
-                    } else if (selectionRect != null) {
+
+                        // Now, determine if we are starting a move or resize of this activated subtitle's selectionRect
                         resizingEdge = getResizingEdge(imagePoint)
                         if (resizingEdge != -1) {
-                            startPoint = imagePoint
+                            startPoint = imagePoint // For resizing
                         } else if (selectionRect!!.contains(imagePoint)) {
                             isMoving = true
-                            lastMousePoint = imagePoint
+                            lastMousePoint = imagePoint // For moving
                         } else {
-                            selectionRect = null // Clicked outside existing selection
-                            startPoint = imagePoint
+                            // Clicked on subtitle but not on its border/inside for move/resize,
+                            // so treat as a click to activate, but don't start a drag operation.
+                            startPoint = null
                         }
-                    } else {
-                        selectionRect = null // Clear selection if clicked outside
-                        startPoint = imagePoint
+                    } else { // No subtitle was clicked
+                        // Clear any previously selected subtitle
+                        selectedSubtitle = null
+
+                        // Check if we are clicking inside an existing selectionRect (not necessarily a subtitle)
+                        if (selectionRect != null && selectionRect!!.contains(imagePoint)) {
+                            resizingEdge = getResizingEdge(imagePoint)
+                            if (resizingEdge != -1) {
+                                startPoint = imagePoint
+                            } else {
+                                isMoving = true
+                                lastMousePoint = imagePoint
+                            }
+                        } else {
+                            // Clicked outside any subtitle and outside any existing selectionRect
+                            selectionRect = null // Clear previous selection
+                            startPoint = imagePoint // Start a new selection
+                        }
                     }
                 }
                 repaint()
             }
 
             override fun mouseReleased(e: MouseEvent) {
+                if (selectedSubtitle != null && selectionRect != null) {
+                    // Update the subtitle's bounds with the final selectionRect
+                    val index = subtitles.indexOf(selectedSubtitle)
+                    if (index != -1) {
+                        subtitles[index] = selectedSubtitle!!.copy(bounds = selectionRect!!)
+                    }
+                    selectedSubtitle = null // Clear selected subtitle after saving
+                }
                 startPoint = null
                 resizingEdge = -1
                 isMoving = false
