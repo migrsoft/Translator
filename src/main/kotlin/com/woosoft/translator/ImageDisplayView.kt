@@ -21,9 +21,17 @@ fun createImageDisplayView(): JScrollPane {
     return scrollPane
 }
 
-fun displayImage(displayableImage: DisplayableImage, mode: ImageDisplayMode, scrollPane: JScrollPane, imageSizeLabel: JLabel) {
+fun displayImage(displayableImage: DisplayableImage?, mode: ImageDisplayMode, scrollPane: JScrollPane, imageSizeLabel: JLabel) {
     currentDisplayableImage = displayableImage
     currentDisplayMode = mode
+
+    if (displayableImage == null) {
+        imagePanel.setImage(null, mode)
+        scrollPane.revalidate()
+        scrollPane.repaint()
+        imageSizeLabel.text = ""
+        return
+    }
 
     try {
         val bufferedImage: BufferedImage = ImageIO.read(displayableImage.getInputStream())
@@ -40,9 +48,7 @@ fun displayImage(displayableImage: DisplayableImage, mode: ImageDisplayMode, scr
 }
 
 fun redrawCurrentImage(scrollPane: JScrollPane, imageSizeLabel: JLabel) {
-    currentDisplayableImage?.let {
-        displayImage(it, currentDisplayMode, scrollPane, imageSizeLabel)
-    }
+    displayImage(currentDisplayableImage, currentDisplayMode, scrollPane, imageSizeLabel)
 }
 
 fun getSelectedImageFromDisplay(): BufferedImage? {

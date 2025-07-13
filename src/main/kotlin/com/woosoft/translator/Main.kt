@@ -264,6 +264,43 @@ fun createAndShowGUI() {
                             renameDialog.isVisible = true
                         }
                         popupMenu.add(renameMenuItem)
+
+                        val deleteMenuItem = JMenuItem("Delete")
+                        deleteMenuItem.addActionListener {
+                            val confirm = JOptionPane.showConfirmDialog(
+                                frame,
+                                "Are you sure you want to delete the selected files?",
+                                "Confirm Delete",
+                                JOptionPane.YES_NO_OPTION
+                            )
+                            if (confirm == JOptionPane.YES_OPTION) {
+                                val selectedLocalFiles = selectedIndices.map { selectedFilesList[it] as LocalFileImage }
+                                val filesToDelete = selectedLocalFiles.map { it.file }
+                                var deletedCount = 0
+                                for (file in filesToDelete) {
+                                    if (file.delete()) {
+                                        println("Deleted file: ${file.name}")
+                                        deletedCount++
+                                    } else {
+                                        JOptionPane.showMessageDialog(frame, "Failed to delete ${file.name}", "Delete Error", JOptionPane.ERROR_MESSAGE)
+                                    }
+                                }
+                                if (deletedCount > 0) {
+                                    // Rebuild the list after deletion
+                                    fileListModel.clear()
+                                    selectedFilesList.removeAll(selectedLocalFiles)
+                                    selectedFilesList.sortBy { it.name }
+                                    selectedFilesList.forEach {
+                                        fileListModel.addElement(it.name)
+                                    }
+                                    // Clear image display if the currently displayed image was deleted
+                                    if (selectedFilesList.isEmpty()) {
+                                        displayImage(null, ImageDisplayMode.FIT_TO_VIEW, imageDisplayScrollPane, imageSizeLabel)
+                                    }
+                                }
+                            }
+                        }
+                        popupMenu.add(deleteMenuItem)
                         popupMenu.show(fileList, e.x, e.y)
                     }
                 }
