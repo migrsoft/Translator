@@ -24,7 +24,7 @@ interface DisplayableImage {
     fun getInputStream(): InputStream
 }
 
-class LocalFileImage(private val file: File) : DisplayableImage {
+class LocalFileImage(val file: File) : DisplayableImage {
     override val name: String = file.name
     override fun getInputStream(): InputStream = file.inputStream()
 }
@@ -216,6 +216,49 @@ fun createAndShowGUI() {
                 if (selectedIndex != -1) {
                     val selectedDisplayableImage = selectedFilesList[selectedIndex]
                     displayImage(selectedDisplayableImage, ImageDisplayMode.FIT_TO_WIDTH, imageDisplayScrollPane, imageSizeLabel)
+                }
+            }
+        }
+    })
+
+    // Add MouseListener for right-click context menu
+    fileList.addMouseListener(object : java.awt.event.MouseAdapter() {
+        override fun mousePressed(e: java.awt.event.MouseEvent) {
+            if (SwingUtilities.isRightMouseButton(e)) {
+                val selectedIndices = fileList.selectedIndices
+                if (selectedIndices.size > 1) {
+                    val allLocalFiles = selectedIndices.all { selectedFilesList[it] is LocalFileImage }
+                    if (allLocalFiles) {
+                        val popupMenu = JPopupMenu()
+                        val renameMenuItem = JMenuItem("Rename")
+                        renameMenuItem.addActionListener {
+                            val renameDialog = RenameDialog(frame) { prefix, startNumber, width ->
+                                // Perform renaming logic here
+                                val selectedLocalFiles = selectedIndices.map { selectedFilesList[it] as LocalFileImage }
+                                var currentNumber = startNumber
+                                for (i in selectedLocalFiles.indices) {
+                                    val originalFile = selectedLocalFiles[i].file
+                                    val extension = originalFile.extension
+                                    val newFileName = "${prefix}${String.format("%0${width}d", currentNumber)}.${extension}"
+                                    val newFile = File(originalFile.parentFile, newFileName)
+                                    if (originalFile.renameTo(newFile)) {
+                                        println("Renamed ${originalFile.name} to ${newFile.name}")
+                                        // Update the fileListModel and selectedFilesList
+                                        val oldName = fileListModel.getElementAt(selectedIndices[i])
+                                        val newLocalFileImage = LocalFileImage(newFile)
+                                        fileListModel.setElementAt(newLocalFileImage.name, selectedIndices[i])
+                                        selectedFilesList[selectedIndices[i]] = newLocalFileImage
+                                    } else {
+                                        JOptionPane.showMessageDialog(frame, "Failed to rename ${originalFile.name}", "Rename Error", JOptionPane.ERROR_MESSAGE)
+                                    }
+                                    currentNumber++
+                                }
+                            }
+                            renameDialog.isVisible = true
+                        }
+                        popupMenu.add(renameMenuItem)
+                        popupMenu.show(fileList, e.x, e.y)
+                    }
                 }
             }
         }
