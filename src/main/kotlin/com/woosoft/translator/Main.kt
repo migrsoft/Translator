@@ -9,11 +9,30 @@ import javax.swing.event.ListSelectionEvent
 import javax.swing.event.ListSelectionListener
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
+import java.util.zip.ZipFile
+import java.io.InputStream
+import java.util.zip.ZipEntry
 
 private var lastOpenedDirectory: File? = null
-private val selectedFilesList = mutableListOf<File>()
+private var currentCbzZipFile: ZipFile? = null // To hold the currently open CBZ file
+private val selectedFilesList = mutableListOf<DisplayableImage>()
 private var lastOcrResult: String? = null
 var selectedOcrLanguageCode: String = "eng" // Default to English
+
+interface DisplayableImage {
+    val name: String
+    fun getInputStream(): InputStream
+}
+
+class LocalFileImage(private val file: File) : DisplayableImage {
+    override val name: String = file.name
+    override fun getInputStream(): InputStream = file.inputStream()
+}
+
+class CbzImage(private val zipFile: ZipFile, private val zipEntry: ZipEntry) : DisplayableImage {
+    override val name: String = zipEntry.name.substringAfterLast('/')
+    override fun getInputStream(): InputStream = zipFile.getInputStream(zipEntry)
+}
 
 fun main() {
     SwingUtilities.invokeLater {
@@ -32,6 +51,8 @@ fun createAndShowGUI() {
     val fileMenu = JMenu("File")
     val openMenuItem = JMenuItem("Open")
     fileMenu.add(openMenuItem)
+    val openCbzMenuItem = JMenuItem("Open CBZ")
+    fileMenu.add(openCbzMenuItem)
     val exitMenuItem = JMenuItem("Exit")
     exitMenuItem.addActionListener { System.exit(0) }
     fileMenu.add(exitMenuItem)
@@ -109,6 +130,9 @@ fun createAndShowGUI() {
 
     // Add action listener for Open menu item
     openMenuItem.addActionListener {
+        currentCbzZipFile?.close() // Close any previously opened CBZ file
+        currentCbzZipFile = null
+
         val fileChooser = JFileChooser()
         fileChooser.fileFilter = FileNameExtensionFilter("Image Files", "jpeg", "jpg", "png", "webp")
         fileChooser.isMultiSelectionEnabled = true // Enable multi-selection
@@ -122,10 +146,62 @@ fun createAndShowGUI() {
 
             val selectedFiles: Array<File> = fileChooser.selectedFiles
             for (file in selectedFiles) {
-                fileListModel.addElement(file.name)
-                selectedFilesList.add(file)
+                val localFileImage = LocalFileImage(file)
+                fileListModel.addElement(localFileImage.name)
+                selectedFilesList.add(localFileImage)
             }
             selectedFiles.firstOrNull()?.parentFile?.let { lastOpenedDirectory = it }
+        }
+    }
+
+    // Add action listener for Open CBZ menu item
+    openCbzMenuItem.addActionListener {
+        currentCbzZipFile?.close() // Close any previously opened CBZ file
+        currentCbzZipFile = null
+
+        val fileChooser = JFileChooser()
+        fileChooser.fileFilter = FileNameExtensionFilter("CBZ Files", "cbz")
+        fileChooser.isMultiSelectionEnabled = false // Only allow single CBZ selection
+
+        lastOpenedDirectory?.let { fileChooser.currentDirectory = it }
+
+        val result = fileChooser.showOpenDialog(frame)
+        if (result == JFileChooser.APPROVE_OPTION) {
+            val selectedCbzFile = fileChooser.selectedFile
+            if (selectedCbzFile != null) {
+                fileListModel.clear()
+                selectedFilesList.clear()
+
+                try {
+                    val zipFile = ZipFile(selectedCbzFile)
+                    currentCbzZipFile = zipFile // Store the ZipFile
+
+                    val entries = zipFile.entries()
+                    val imageEntries = mutableListOf<CbzImage>()
+                    while (entries.hasMoreElements()) {
+                        val entry = entries.nextElement()
+                        if (!entry.isDirectory && (entry.name.endsWith(".jpg", true) || entry.name.endsWith(".jpeg", true) || entry.name.endsWith(".png", true) || entry.name.endsWith(".webp", true))) {
+                            imageEntries.add(CbzImage(zipFile, entry))
+                        }
+                    }
+                    // Sort image entries by name
+                    imageEntries.sortBy { it.name }
+
+                    imageEntries.forEach { cbzImage ->
+                        fileListModel.addElement(cbzImage.name)
+                        selectedFilesList.add(cbzImage)
+                    }
+
+                    if (selectedFilesList.isNotEmpty()) {
+                        fileList.selectedIndex = 0 // Select the first image
+                        displayImage(selectedFilesList[0], ImageDisplayMode.FIT_TO_WIDTH, imageDisplayScrollPane)
+                    }
+                    selectedCbzFile.parentFile?.let { lastOpenedDirectory = it }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    JOptionPane.showMessageDialog(frame, "Error opening CBZ file: ${e.message}", "CBZ Error", JOptionPane.ERROR_MESSAGE)
+                }
+            }
         }
     }
 
@@ -135,8 +211,8 @@ fun createAndShowGUI() {
             if (!e!!.getValueIsAdjusting()) {
                 val selectedIndex = fileList.selectedIndex
                 if (selectedIndex != -1) {
-                    val selectedFile = selectedFilesList[selectedIndex]
-                    displayImage(selectedFile, ImageDisplayMode.FIT_TO_WIDTH, imageDisplayScrollPane)
+                    val selectedDisplayableImage = selectedFilesList[selectedIndex]
+                    displayImage(selectedDisplayableImage, ImageDisplayMode.FIT_TO_WIDTH, imageDisplayScrollPane)
                 }
             }
         }
@@ -146,22 +222,22 @@ fun createAndShowGUI() {
     fitToViewButton.addActionListener { 
         val selectedIndex = fileList.selectedIndex
         if (selectedIndex != -1) {
-            val selectedFile = selectedFilesList[selectedIndex]
-            displayImage(selectedFile, ImageDisplayMode.FIT_TO_VIEW, imageDisplayScrollPane)
+            val selectedDisplayableImage = selectedFilesList[selectedIndex]
+            displayImage(selectedDisplayableImage, ImageDisplayMode.FIT_TO_VIEW, imageDisplayScrollPane)
         }
     }
     fitToWidthButton.addActionListener { 
         val selectedIndex = fileList.selectedIndex
         if (selectedIndex != -1) {
-            val selectedFile = selectedFilesList[selectedIndex]
-            displayImage(selectedFile, ImageDisplayMode.FIT_TO_WIDTH, imageDisplayScrollPane)
+            val selectedDisplayableImage = selectedFilesList[selectedIndex]
+            displayImage(selectedDisplayableImage, ImageDisplayMode.FIT_TO_WIDTH, imageDisplayScrollPane)
         }
     }
     actualSizeButton.addActionListener { 
         val selectedIndex = fileList.selectedIndex
         if (selectedIndex != -1) {
-            val selectedFile = selectedFilesList[selectedIndex]
-            displayImage(selectedFile, ImageDisplayMode.ACTUAL_SIZE, imageDisplayScrollPane)
+            val selectedDisplayableImage = selectedFilesList[selectedIndex]
+            displayImage(selectedDisplayableImage, ImageDisplayMode.ACTUAL_SIZE, imageDisplayScrollPane)
         }
     }
 
