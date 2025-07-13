@@ -224,8 +224,6 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
             }
 
             // Draw subtitles
-            g.color = Color.BLUE // Subtitle color
-            g.font = Font("Arial", Font.BOLD, (16 * scale).toInt().coerceAtLeast(1)) // Scale font size
             for (subtitle in subtitles) {
                 val drawRect = Rectangle(
                     (subtitle.bounds.x * scale).toInt() + imageX,
@@ -233,9 +231,14 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
                     (subtitle.bounds.width * scale).toInt(),
                     (subtitle.bounds.height * scale).toInt()
                 )
-                g.drawString(subtitle.text, drawRect.x, drawRect.y + drawRect.height) // Draw text at bottom of bounding box
-                (g as Graphics2D).stroke = BasicStroke(1f)
-                g.drawRect(drawRect.x, drawRect.y, drawRect.width, drawRect.height) // Draw bounding box
+
+                // Draw white background
+                g.color = Color.WHITE
+                g.fillRect(drawRect.x, drawRect.y, drawRect.width, drawRect.height)
+
+                // Draw black text
+                g.color = Color.BLACK
+                drawWrappedText(g as Graphics2D, subtitle.text, drawRect)
             }
         }
     }
@@ -401,5 +404,70 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
             return Point(((p.x - imageX) / scale).toInt(), ((p.y - imageY) / scale).toInt())
         }
         return p
+    }
+
+    private fun drawWrappedText(g2d: Graphics2D, text: String, bounds: Rectangle) {
+        if (bounds.width <= 0 || bounds.height <= 0) return
+
+        var fontSize = 200f // Start with a large font size and reduce it
+        var font: Font
+        var fontMetrics: FontMetrics
+        var lines: List<String>
+        var textHeight: Int
+
+        // Binary search for the largest font size that fits
+        var low = 1f
+        var high = 200f
+        var bestFitFontSize = 1f
+
+        while (high - low > 0.1f) { // Iterate until precision is met
+            val mid = (low + high) / 2
+            font = Font("Arial", Font.PLAIN, mid.toInt().coerceAtLeast(1))
+            fontMetrics = g2d.getFontMetrics(font)
+            lines = wrapText(text, fontMetrics, bounds.width)
+            textHeight = lines.size * fontMetrics.getHeight()
+
+            if (textHeight <= bounds.height) {
+                bestFitFontSize = mid
+                low = mid
+            } else {
+                high = mid
+            }
+        }
+
+        font = Font("Arial", Font.PLAIN, bestFitFontSize.toInt().coerceAtLeast(1))
+        g2d.font = font
+        fontMetrics = g2d.getFontMetrics(font)
+        lines = wrapText(text, fontMetrics, bounds.width)
+
+        var y = bounds.y + fontMetrics.getAscent()
+        for (line in lines) {
+            g2d.drawString(line, bounds.x, y)
+            y += fontMetrics.getHeight()
+        }
+    }
+
+    private fun wrapText(text: String, fontMetrics: FontMetrics, maxWidth: Int): List<String> {
+        val lines = mutableListOf<String>()
+        val words = text.split(" ")
+        var currentLine = StringBuilder()
+
+        for (word in words) {
+            if (currentLine.isEmpty()) {
+                currentLine.append(word)
+            } else {
+                val potentialLine = "$currentLine $word"
+                if (fontMetrics.stringWidth(potentialLine) <= maxWidth) {
+                    currentLine.append(" ").append(word)
+                } else {
+                    lines.add(currentLine.toString())
+                    currentLine = StringBuilder(word)
+                }
+            }
+        }
+        if (currentLine.isNotEmpty()) {
+            lines.add(currentLine.toString())
+        }
+        return lines
     }
 }
