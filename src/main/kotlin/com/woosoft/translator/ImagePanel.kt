@@ -478,50 +478,54 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
     }
 
     private fun wrapText(text: String, fontMetrics: FontMetrics, maxWidth: Int): List<String> {
-        val lines = mutableListOf<String>()
-        if (text.isEmpty()) return lines
+        val resultLines = mutableListOf<String>()
+        if (text.isEmpty()) return resultLines
 
-        val words = text.split(" ") // Split by spaces for languages that use them
+        val paragraphs = text.split("\n")
 
-        var currentLine = StringBuilder()
-        for (word in words) {
-            if (fontMetrics.stringWidth(word) > maxWidth) {
-                // If a single word is too long, break it by characters
-                if (currentLine.isNotEmpty()) {
-                    lines.add(currentLine.toString())
-                    currentLine = StringBuilder()
-                }
-                var tempWord = word
-                while (tempWord.isNotEmpty()) {
-                    var i = 1
-                    while (i <= tempWord.length && fontMetrics.stringWidth(tempWord.substring(0, i)) <= maxWidth) {
-                        i++
-                    }
-                    // If the first character already exceeds maxWidth, just add it
-                    if (i == 1 && fontMetrics.stringWidth(tempWord.substring(0, 1)) > maxWidth) {
-                        lines.add(tempWord.substring(0, 1))
-                        tempWord = tempWord.substring(1)
-                    } else {
-                        lines.add(tempWord.substring(0, i - 1))
-                        tempWord = tempWord.substring(i - 1)
-                    }
-                }
-            } else {
-                val potentialLine = if (currentLine.isEmpty()) word else "$currentLine $word"
-                if (fontMetrics.stringWidth(potentialLine) <= maxWidth) {
+        for (paragraph in paragraphs) {
+            val words = paragraph.split(" ")
+            var currentLine = StringBuilder()
+
+            for (word in words) {
+                if (fontMetrics.stringWidth(word) > maxWidth) {
+                    // If a single word is too long, break it by characters
                     if (currentLine.isNotEmpty()) {
-                        currentLine.append(" ")
+                        resultLines.add(currentLine.toString())
+                        currentLine = StringBuilder()
                     }
-                    currentLine.append(word)
+                    var tempWord = word
+                    while (tempWord.isNotEmpty()) {
+                        var i = 1
+                        while (i <= tempWord.length && fontMetrics.stringWidth(tempWord.substring(0, i)) <= maxWidth) {
+                            i++
+                        }
+                        // If the first character already exceeds maxWidth, just add it
+                        if (i == 1 && fontMetrics.stringWidth(tempWord.substring(0, 1)) > maxWidth) {
+                            resultLines.add(tempWord.substring(0, 1))
+                            tempWord = tempWord.substring(1)
+                        } else {
+                            resultLines.add(tempWord.substring(0, i - 1))
+                            tempWord = tempWord.substring(i - 1)
+                        }
+                    }
                 } else {
-                    lines.add(currentLine.toString())
-                    currentLine = StringBuilder(word)
+                    val potentialLine = if (currentLine.isEmpty()) word else "$currentLine $word"
+                    if (fontMetrics.stringWidth(potentialLine) <= maxWidth) {
+                        if (currentLine.isNotEmpty()) {
+                            currentLine.append(" ")
+                        }
+                        currentLine.append(word)
+                    } else {
+                        resultLines.add(currentLine.toString())
+                        currentLine = StringBuilder(word)
+                    }
                 }
             }
+            if (currentLine.isNotEmpty()) {
+                resultLines.add(currentLine.toString())
+            }
         }
-        if (currentLine.isNotEmpty()) {
-            lines.add(currentLine.toString())
-        }
-        return lines
+        return resultLines
     }
 }
