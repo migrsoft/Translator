@@ -11,8 +11,14 @@ import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.SwingUtilities
 import javax.swing.JFrame
-import javax.swing.JPopupMenu
 import javax.swing.JMenuItem
+import javax.swing.JPopupMenu
+
+enum class SubtitleDisplayMode {
+    NONE,
+    OCR,
+    TRANSLATION,
+}
 
 class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
 
@@ -29,6 +35,7 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
     private var isMoving: Boolean = false
     private var lastMousePoint: Point? = null
 
+    var currentSubtitleDisplayMode: SubtitleDisplayMode = SubtitleDisplayMode.TRANSLATION // Default to displaying translated text
     private val RESIZE_HANDLE_SIZE = 8
     private val EDGE_TOLERANCE = 5
 
@@ -58,10 +65,10 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
                             val topFrame = SwingUtilities.getWindowAncestor(this@ImagePanel)
                             if (topFrame is JFrame) {
                                 val frameOwner = topFrame as JFrame
-                                val dialog = SubtitleEditDialog(frameOwner, clickedSubtitle.text) { newText ->
+                                val dialog = SubtitleEditDialog(frameOwner, clickedSubtitle.translatedText) { newText ->
                                     val index = subtitles.indexOf(clickedSubtitle)
                                     if (index != -1) {
-                                        subtitles[index] = clickedSubtitle.copy(text = newText)
+                                        subtitles[index] = clickedSubtitle.copy(translatedText = newText)
                                         repaint()
                                     }
                                 }
@@ -225,20 +232,28 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
 
             // Draw subtitles
             for (subtitle in subtitles) {
-                val drawRect = Rectangle(
-                    (subtitle.bounds.x * scale).toInt() + imageX,
-                    (subtitle.bounds.y * scale).toInt() + imageY,
-                    (subtitle.bounds.width * scale).toInt(),
-                    (subtitle.bounds.height * scale).toInt()
-                )
+                val textToDisplay = when (currentSubtitleDisplayMode) {
+                    SubtitleDisplayMode.NONE -> null
+                    SubtitleDisplayMode.OCR -> subtitle.ocrText
+                    SubtitleDisplayMode.TRANSLATION -> subtitle.translatedText
+                }
 
-                // Draw white background
-                g.color = Color.WHITE
-                g.fillRect(drawRect.x, drawRect.y, drawRect.width, drawRect.height)
+                if (textToDisplay != null) {
+                    val drawRect = Rectangle(
+                        (subtitle.bounds.x * scale).toInt() + imageX,
+                        (subtitle.bounds.y * scale).toInt() + imageY,
+                        (subtitle.bounds.width * scale).toInt(),
+                        (subtitle.bounds.height * scale).toInt()
+                    )
 
-                // Draw black text
-                g.color = Color.BLACK
-                drawWrappedText(g as Graphics2D, subtitle.text, drawRect)
+                    // Draw white background
+                    g.color = Color.WHITE
+                    g.fillRect(drawRect.x, drawRect.y, drawRect.width, drawRect.height)
+
+                    // Draw black text
+                    g.color = Color.BLACK
+                    drawWrappedText(g as Graphics2D, textToDisplay, drawRect)
+                }
             }
         }
     }
@@ -394,6 +409,11 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
 
     fun addSubtitle(subtitle: SubtitleEntry) {
         subtitles.add(subtitle)
+        repaint()
+    }
+
+    fun setSubtitleDisplayMode(mode: SubtitleDisplayMode) {
+        currentSubtitleDisplayMode = mode
         repaint()
     }
 

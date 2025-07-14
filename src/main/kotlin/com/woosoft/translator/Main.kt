@@ -89,6 +89,35 @@ fun createAndShowGUI() {
         }
     }
 
+    val subtitleDisplayMenu = JMenu("Subtitle Display")
+    editMenu.add(subtitleDisplayMenu)
+
+    val subtitleDisplayButtonGroup = ButtonGroup()
+
+    val noSubtitlesMenuItem = JRadioButtonMenuItem("No Subtitles")
+    noSubtitlesMenuItem.addActionListener {
+        getImagePanel().setSubtitleDisplayMode(SubtitleDisplayMode.NONE)
+    }
+    subtitleDisplayButtonGroup.add(noSubtitlesMenuItem)
+    subtitleDisplayMenu.add(noSubtitlesMenuItem)
+
+    val ocrSubtitlesMenuItem = JRadioButtonMenuItem("OCR Subtitles")
+    ocrSubtitlesMenuItem.addActionListener {
+        getImagePanel().setSubtitleDisplayMode(SubtitleDisplayMode.OCR)
+    }
+    subtitleDisplayButtonGroup.add(ocrSubtitlesMenuItem)
+    subtitleDisplayMenu.add(ocrSubtitlesMenuItem)
+
+    val translatedSubtitlesMenuItem = JRadioButtonMenuItem("Translated Subtitles")
+    translatedSubtitlesMenuItem.addActionListener {
+        getImagePanel().setSubtitleDisplayMode(SubtitleDisplayMode.TRANSLATION)
+    }
+    subtitleDisplayButtonGroup.add(translatedSubtitlesMenuItem)
+    subtitleDisplayMenu.add(translatedSubtitlesMenuItem)
+
+    // Set initial selection for subtitle display (default to translated)
+    translatedSubtitlesMenuItem.isSelected = true
+
     frame.jMenuBar = menuBar
 
     // Create the file list view (left side)
@@ -359,7 +388,7 @@ fun createAndShowGUI() {
             if (currentSelection != null) {
                 val translationDialog = TranslationDialog(frame, lastOcrResult!!, selectedOcrLanguageCode) {
                     translatedText ->
-                    getImagePanel().addSubtitle(SubtitleEntry(translatedText, currentSelection))
+                    getImagePanel().addSubtitle(SubtitleEntry(lastOcrResult!!, translatedText, currentSelection))
                 }
                 translationDialog.isVisible = true
             } else {
