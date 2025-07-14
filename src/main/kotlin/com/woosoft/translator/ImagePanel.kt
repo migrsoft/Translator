@@ -255,7 +255,10 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
 
                     // Draw black text
                     g.color = Color.BLACK
-                    drawWrappedText(g as Graphics2D, textToDisplay, drawRect)
+                    val g2d = g as Graphics2D
+                    g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+                    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                    drawWrappedText(g2d, textToDisplay, drawRect)
                 }
             }
         }
