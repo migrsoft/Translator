@@ -22,6 +22,15 @@ class OcrResultDialog(owner: JFrame, ocrText: String) : JDialog(owner, "OCR Resu
 
         
 
+        val okButton = JButton("OK")
+        okButton.addActionListener {
+            dispose()
+        }
+
+        val buttonPanel = JPanel()
+        buttonPanel.add(okButton)
+        add(buttonPanel, BorderLayout.SOUTH)
+
         pack()
         setLocationRelativeTo(owner)
     }
