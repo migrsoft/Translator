@@ -18,6 +18,8 @@ fun createImageDisplayView(): JScrollPane {
     scrollPane.setViewportView(imagePanel)
     scrollPane.horizontalScrollBarPolicy = JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED
     scrollPane.verticalScrollBarPolicy = JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED
+    scrollPane.verticalScrollBar.unitIncrement = 20
+    scrollPane.horizontalScrollBar.unitIncrement = 20
 
     return scrollPane
 }
