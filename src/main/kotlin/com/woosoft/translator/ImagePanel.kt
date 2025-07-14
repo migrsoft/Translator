@@ -460,9 +460,13 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
         fontMetrics = g2d.getFontMetrics(font)
         lines = wrapText(text, fontMetrics, bounds.width)
 
-        var y = bounds.y + fontMetrics.getAscent()
+        val totalTextHeight = lines.size * fontMetrics.getHeight()
+        var y = bounds.y + (bounds.height - totalTextHeight) / 2 + fontMetrics.getAscent()
+
         for (line in lines) {
-            g2d.drawString(line, bounds.x, y)
+            val lineWidth = fontMetrics.stringWidth(line)
+            val x = bounds.x + (bounds.width - lineWidth) / 2
+            g2d.drawString(line, x, y)
             y += fontMetrics.getHeight()
         }
     }
