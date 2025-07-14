@@ -179,6 +179,7 @@ fun createAndShowGUI() {
         if (result == JFileChooser.APPROVE_OPTION) {
             fileListModel.clear() // Clear existing items
             selectedFilesList.clear() // Clear the list of selected files
+            displayImage(null, ImageDisplayMode.FIT_TO_VIEW, imageDisplayScrollPane, imageSizeLabel) // Clear previous image
 
             val selectedFiles: Array<File> = fileChooser.selectedFiles
             for (file in selectedFiles) {
@@ -218,6 +219,7 @@ fun createAndShowGUI() {
             if (selectedCbzFile != null) {
                 fileListModel.clear()
                 selectedFilesList.clear()
+                displayImage(null, ImageDisplayMode.FIT_TO_VIEW, imageDisplayScrollPane, imageSizeLabel) // Clear previous image
 
                 try {
                     val zipFile = ZipFile(selectedCbzFile)
