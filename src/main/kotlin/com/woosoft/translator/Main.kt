@@ -282,22 +282,24 @@ fun createAndShowGUI() {
         fileChooser.dialogTitle = "Save Subtitles"
         fileChooser.fileFilter = FileNameExtensionFilter("Subtitle JSON Files", "json")
 
-        val suggestedFileName: String
-        val fileToSave: File
-
         if (currentCbzZipFile != null) {
             // For CBZ files, save all accumulated subtitles
             lastSelectedImageName?.let { prevImageName ->
                 currentCbzImageSubtitles[prevImageName] = getImagePanel().subtitles.toMutableList()
             }
-            suggestedFileName = currentCbzZipFile!!.name.substringBeforeLast(".") + ".json"
-            fileToSave = File(lastOpenedDirectory, suggestedFileName)
-            try {
-                SubtitleManager.saveCbzSubtitles(fileToSave, currentCbzImageSubtitles)
-                JOptionPane.showMessageDialog(frame, "CBZ subtitles saved successfully to ${fileToSave.name}", "Save Subtitles", JOptionPane.INFORMATION_MESSAGE)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                JOptionPane.showMessageDialog(frame, "Error saving CBZ subtitles: ${e.message}", "Save Error", JOptionPane.ERROR_MESSAGE)
+            val suggestedFileName = currentCbzZipFile!!.name.substringBeforeLast(".") + ".json"
+            fileChooser.selectedFile = File(lastOpenedDirectory, suggestedFileName)
+
+            val result = fileChooser.showSaveDialog(frame)
+            if (result == JFileChooser.APPROVE_OPTION) {
+                val fileToSave = fileChooser.selectedFile
+                try {
+                    SubtitleManager.saveCbzSubtitles(fileToSave, currentCbzImageSubtitles)
+                    JOptionPane.showMessageDialog(frame, "CBZ subtitles saved successfully to ${fileToSave.name}", "Save Subtitles", JOptionPane.INFORMATION_MESSAGE)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    JOptionPane.showMessageDialog(frame, "Error saving CBZ subtitles: ${e.message}", "Save Error", JOptionPane.ERROR_MESSAGE)
+                }
             }
         } else { // Single image file
             val currentSubtitles = getImagePanel().subtitles
@@ -307,7 +309,7 @@ fun createAndShowGUI() {
             }
 
             val firstImageFile = (selectedFilesList[0] as LocalFileImage).file
-            suggestedFileName = firstImageFile.nameWithoutExtension + ".json"
+            val suggestedFileName = firstImageFile.nameWithoutExtension + ".json"
             fileChooser.selectedFile = File(lastOpenedDirectory, suggestedFileName)
 
             val result = fileChooser.showSaveDialog(frame)
