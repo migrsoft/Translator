@@ -28,7 +28,7 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
     private var scale: Double = 1.0
 
     var selectionRect: Rectangle? = null
-    private val subtitles: MutableList<SubtitleEntry> = mutableListOf()
+    var subtitles: MutableList<SubtitleEntry> = mutableListOf()
     private var selectedSubtitle: SubtitleEntry? = null
     private var startPoint: Point? = null
     private var resizingEdge: Int = -1 // -1: none, 0: top-left, 1: top-right, 2: bottom-left, 3: bottom-right, 4: top, 5: right, 6: bottom, 7: left

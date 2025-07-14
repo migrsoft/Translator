@@ -53,6 +53,8 @@ fun createAndShowGUI() {
     fileMenu.add(openMenuItem)
     val openCbzMenuItem = JMenuItem("Open CBZ")
     fileMenu.add(openCbzMenuItem)
+    val saveSubtitlesMenuItem = JMenuItem("Save Subtitles")
+    fileMenu.add(saveSubtitlesMenuItem)
     val exitMenuItem = JMenuItem("Exit")
     exitMenuItem.addActionListener { System.exit(0) }
     fileMenu.add(exitMenuItem)
@@ -183,6 +185,17 @@ fun createAndShowGUI() {
                 selectedFilesList.add(localFileImage)
             }
             selectedFiles.firstOrNull()?.parentFile?.let { lastOpenedDirectory = it }
+
+            // Automatically load subtitles if available
+            if (selectedFilesList.isNotEmpty()) {
+                val firstImageFile = (selectedFilesList[0] as LocalFileImage).file
+                val subtitleFile = File(firstImageFile.parentFile, firstImageFile.nameWithoutExtension + ".json")
+                if (subtitleFile.exists()) {
+                    val loadedSubtitles = SubtitleManager.loadSubtitles(subtitleFile)
+                    getImagePanel().subtitles.clear()
+                    loadedSubtitles.forEach { getImagePanel().addSubtitle(it) }
+                }
+            }
         }
     }
 
@@ -229,10 +242,55 @@ fun createAndShowGUI() {
                         displayImage(selectedFilesList[0], ImageDisplayMode.FIT_TO_WIDTH, imageDisplayScrollPane, imageSizeLabel)
                     }
                     selectedCbzFile.parentFile?.let { lastOpenedDirectory = it }
+
+                    // Automatically load subtitles if available for CBZ
+                    val subtitleFile = File(selectedCbzFile.parentFile, selectedCbzFile.nameWithoutExtension + ".json")
+                    if (subtitleFile.exists()) {
+                        val loadedSubtitles = SubtitleManager.loadSubtitles(subtitleFile)
+                        getImagePanel().subtitles.clear()
+                        loadedSubtitles.forEach { getImagePanel().addSubtitle(it) }
+                    }
+
                 } catch (e: Exception) {
                     e.printStackTrace()
                     JOptionPane.showMessageDialog(frame, "Error opening CBZ file: ${e.message}", "CBZ Error", JOptionPane.ERROR_MESSAGE)
                 }
+            }
+        }
+    }
+
+    // Add action listener for Save Subtitles menu item
+    saveSubtitlesMenuItem.addActionListener {
+        val currentSubtitles = getImagePanel().subtitles
+        if (currentSubtitles.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "No subtitles to save.", "Save Subtitles", JOptionPane.INFORMATION_MESSAGE)
+            return@addActionListener
+        }
+
+        val fileChooser = JFileChooser()
+        fileChooser.dialogTitle = "Save Subtitles"
+        fileChooser.fileFilter = FileNameExtensionFilter("Subtitle JSON Files", "json")
+
+        // Suggest a filename based on the currently displayed image or CBZ file
+        val suggestedFileName = when {
+            currentCbzZipFile != null -> currentCbzZipFile!!.name.substringBeforeLast(".") + ".json"
+            selectedFilesList.isNotEmpty() && selectedFilesList[0] is LocalFileImage -> {
+                val firstImageFile = (selectedFilesList[0] as LocalFileImage).file
+                firstImageFile.nameWithoutExtension + ".json"
+            }
+            else -> "subtitles.json"
+        }
+        fileChooser.selectedFile = File(lastOpenedDirectory, suggestedFileName)
+
+        val result = fileChooser.showSaveDialog(frame)
+        if (result == JFileChooser.APPROVE_OPTION) {
+            val fileToSave = fileChooser.selectedFile
+            try {
+                SubtitleManager.saveSubtitles(fileToSave, currentSubtitles)
+                JOptionPane.showMessageDialog(frame, "Subtitles saved successfully to ${fileToSave.name}", "Save Subtitles", JOptionPane.INFORMATION_MESSAGE)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                JOptionPane.showMessageDialog(frame, "Error saving subtitles: ${e.message}", "Save Error", JOptionPane.ERROR_MESSAGE)
             }
         }
     }
