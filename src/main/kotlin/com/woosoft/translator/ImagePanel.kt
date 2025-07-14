@@ -79,6 +79,14 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
                             }
                         }
                         popupMenu.add(editMenuItem)
+                        val deleteMenuItem = JMenuItem("Delete Subtitle")
+                        deleteMenuItem.addActionListener {
+                            subtitles.remove(clickedSubtitle)
+                            selectionRect = null // Clear selection after deleting
+                            selectedSubtitle = null
+                            repaint()
+                        }
+                        popupMenu.add(deleteMenuItem)
                         popupMenu.show(e.component, e.x, e.y)
                     }
                 } else { // Left-click

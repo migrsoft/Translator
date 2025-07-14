@@ -66,6 +66,22 @@ fun createAndShowGUI() {
     
     val ocrLanguageMenu = JMenu("OCR Language")
     editMenu.add(ocrLanguageMenu)
+
+    val deleteSubtitlesMenuItem = JMenuItem("Delete All Subtitles")
+    deleteSubtitlesMenuItem.addActionListener {
+        val confirm = JOptionPane.showConfirmDialog(
+            frame,
+            "Are you sure you want to delete all subtitles for the current image?",
+            "Confirm Delete",
+            JOptionPane.YES_NO_OPTION
+        )
+        if (confirm == JOptionPane.YES_OPTION) {
+            getImagePanel().subtitles.clear()
+            getImagePanel().selectionRect = null // Clear any active selection
+            getImagePanel().repaint()
+        }
+    }
+    editMenu.add(deleteSubtitlesMenuItem)
     menuBar.add(editMenu)
 
     val ocrLanguages = mapOf(
