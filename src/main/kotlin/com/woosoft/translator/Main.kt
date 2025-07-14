@@ -15,6 +15,8 @@ import java.util.zip.ZipEntry
 
 private var lastOpenedDirectory: File? = null
 private var currentCbzZipFile: ZipFile? = null // To hold the currently open CBZ file
+private var currentCbzImageSubtitles: MutableMap<String, MutableList<SubtitleEntry>> = mutableMapOf() // Image name to list of subtitles
+private var lastSelectedImageName: String? = null // To track the previously selected image in CBZ
 private val selectedFilesList = mutableListOf<DisplayableImage>()
 private var lastOcrResult: String? = null
 var selectedOcrLanguageCode: String = "eng" // Default to English
@@ -191,7 +193,7 @@ fun createAndShowGUI() {
                 val firstImageFile = (selectedFilesList[0] as LocalFileImage).file
                 val subtitleFile = File(firstImageFile.parentFile, firstImageFile.nameWithoutExtension + ".json")
                 if (subtitleFile.exists()) {
-                    val loadedSubtitles = SubtitleManager.loadSubtitles(subtitleFile)
+                    val loadedSubtitles = SubtitleManager.loadSingleImageSubtitles(subtitleFile)
                     getImagePanel().subtitles.clear()
                     loadedSubtitles.forEach { getImagePanel().addSubtitle(it) }
                 }
@@ -220,6 +222,7 @@ fun createAndShowGUI() {
                 try {
                     val zipFile = ZipFile(selectedCbzFile)
                     currentCbzZipFile = zipFile // Store the ZipFile
+                    currentCbzImageSubtitles.clear() // Clear previous CBZ subtitles
 
                     val entries = zipFile.entries()
                     val imageEntries = mutableListOf<CbzImage>()
@@ -240,15 +243,24 @@ fun createAndShowGUI() {
                     if (selectedFilesList.isNotEmpty()) {
                         fileList.selectedIndex = 0 // Select the first image
                         displayImage(selectedFilesList[0], ImageDisplayMode.FIT_TO_WIDTH, imageDisplayScrollPane, imageSizeLabel)
+                        lastSelectedImageName = selectedFilesList[0].name // Set initial selected image name
                     }
                     selectedCbzFile.parentFile?.let { lastOpenedDirectory = it }
 
                     // Automatically load subtitles if available for CBZ
                     val subtitleFile = File(selectedCbzFile.parentFile, selectedCbzFile.nameWithoutExtension + ".json")
                     if (subtitleFile.exists()) {
-                        val loadedSubtitles = SubtitleManager.loadSubtitles(subtitleFile)
-                        getImagePanel().subtitles.clear()
-                        loadedSubtitles.forEach { getImagePanel().addSubtitle(it) }
+                        val loadedCbzSubtitles = SubtitleManager.loadCbzSubtitles(subtitleFile)
+                        loadedCbzSubtitles.forEach { (imageName, subtitles) ->
+                            currentCbzImageSubtitles[imageName] = subtitles.toMutableList()
+                        }
+                        // Display subtitles for the first image if available
+                        selectedFilesList.firstOrNull()?.name?.let { firstImageName ->
+                            currentCbzImageSubtitles[firstImageName]?.let { subtitlesForFirstImage ->
+                                getImagePanel().subtitles.clear()
+                                subtitlesForFirstImage.forEach { getImagePanel().addSubtitle(it) }
+                            }
+                        }
                     }
 
                 } catch (e: Exception) {
@@ -261,9 +273,8 @@ fun createAndShowGUI() {
 
     // Add action listener for Save Subtitles menu item
     saveSubtitlesMenuItem.addActionListener {
-        val currentSubtitles = getImagePanel().subtitles
-        if (currentSubtitles.isEmpty()) {
-            JOptionPane.showMessageDialog(frame, "No subtitles to save.", "Save Subtitles", JOptionPane.INFORMATION_MESSAGE)
+        if (selectedFilesList.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "No image open to save subtitles for.", "Save Subtitles", JOptionPane.INFORMATION_MESSAGE)
             return@addActionListener
         }
 
@@ -271,26 +282,44 @@ fun createAndShowGUI() {
         fileChooser.dialogTitle = "Save Subtitles"
         fileChooser.fileFilter = FileNameExtensionFilter("Subtitle JSON Files", "json")
 
-        // Suggest a filename based on the currently displayed image or CBZ file
-        val suggestedFileName = when {
-            currentCbzZipFile != null -> currentCbzZipFile!!.name.substringBeforeLast(".") + ".json"
-            selectedFilesList.isNotEmpty() && selectedFilesList[0] is LocalFileImage -> {
-                val firstImageFile = (selectedFilesList[0] as LocalFileImage).file
-                firstImageFile.nameWithoutExtension + ".json"
-            }
-            else -> "subtitles.json"
-        }
-        fileChooser.selectedFile = File(lastOpenedDirectory, suggestedFileName)
+        val suggestedFileName: String
+        val fileToSave: File
 
-        val result = fileChooser.showSaveDialog(frame)
-        if (result == JFileChooser.APPROVE_OPTION) {
-            val fileToSave = fileChooser.selectedFile
+        if (currentCbzZipFile != null) {
+            // For CBZ files, save all accumulated subtitles
+            lastSelectedImageName?.let { prevImageName ->
+                currentCbzImageSubtitles[prevImageName] = getImagePanel().subtitles.toMutableList()
+            }
+            suggestedFileName = currentCbzZipFile!!.name.substringBeforeLast(".") + ".json"
+            fileToSave = File(lastOpenedDirectory, suggestedFileName)
             try {
-                SubtitleManager.saveSubtitles(fileToSave, currentSubtitles)
-                JOptionPane.showMessageDialog(frame, "Subtitles saved successfully to ${fileToSave.name}", "Save Subtitles", JOptionPane.INFORMATION_MESSAGE)
+                SubtitleManager.saveCbzSubtitles(fileToSave, currentCbzImageSubtitles)
+                JOptionPane.showMessageDialog(frame, "CBZ subtitles saved successfully to ${fileToSave.name}", "Save Subtitles", JOptionPane.INFORMATION_MESSAGE)
             } catch (e: Exception) {
                 e.printStackTrace()
-                JOptionPane.showMessageDialog(frame, "Error saving subtitles: ${e.message}", "Save Error", JOptionPane.ERROR_MESSAGE)
+                JOptionPane.showMessageDialog(frame, "Error saving CBZ subtitles: ${e.message}", "Save Error", JOptionPane.ERROR_MESSAGE)
+            }
+        } else { // Single image file
+            val currentSubtitles = getImagePanel().subtitles
+            if (currentSubtitles.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "No subtitles to save for this image.", "Save Subtitles", JOptionPane.INFORMATION_MESSAGE)
+                return@addActionListener
+            }
+
+            val firstImageFile = (selectedFilesList[0] as LocalFileImage).file
+            suggestedFileName = firstImageFile.nameWithoutExtension + ".json"
+            fileChooser.selectedFile = File(lastOpenedDirectory, suggestedFileName)
+
+            val result = fileChooser.showSaveDialog(frame)
+            if (result == JFileChooser.APPROVE_OPTION) {
+                val selectedFile = fileChooser.selectedFile
+                try {
+                    SubtitleManager.saveSingleImageSubtitles(selectedFile, currentSubtitles)
+                    JOptionPane.showMessageDialog(frame, "Subtitles saved successfully to ${selectedFile.name}", "Save Subtitles", JOptionPane.INFORMATION_MESSAGE)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    JOptionPane.showMessageDialog(frame, "Error saving subtitles: ${e.message}", "Save Error", JOptionPane.ERROR_MESSAGE)
+                }
             }
         }
     }
@@ -302,6 +331,22 @@ fun createAndShowGUI() {
                 val selectedIndex = fileList.selectedIndex
                 if (selectedIndex != -1) {
                     val selectedDisplayableImage = selectedFilesList[selectedIndex]
+
+                    // If a CBZ is open, save current image's subtitles and load new image's subtitles
+                    if (currentCbzZipFile != null) {
+                        lastSelectedImageName?.let { prevImageName ->
+                            currentCbzImageSubtitles[prevImageName] = getImagePanel().subtitles.toMutableList()
+                        }
+                        getImagePanel().subtitles.clear()
+                        currentCbzImageSubtitles[selectedDisplayableImage.name]?.let { subtitlesForNewImage ->
+                            subtitlesForNewImage.forEach { getImagePanel().addSubtitle(it) }
+                        }
+                        lastSelectedImageName = selectedDisplayableImage.name
+                    } else {
+                        // For single image files, clear subtitles when switching images
+                        getImagePanel().subtitles.clear()
+                    }
+
                     displayImage(selectedDisplayableImage, ImageDisplayMode.FIT_TO_WIDTH, imageDisplayScrollPane, imageSizeLabel)
                 }
             }
