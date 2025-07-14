@@ -473,16 +473,40 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
 
     private fun wrapText(text: String, fontMetrics: FontMetrics, maxWidth: Int): List<String> {
         val lines = mutableListOf<String>()
-        val words = text.split(" ")
-        var currentLine = StringBuilder()
+        if (text.isEmpty()) return lines
 
+        val words = text.split(" ") // Split by spaces for languages that use them
+
+        var currentLine = StringBuilder()
         for (word in words) {
-            if (currentLine.isEmpty()) {
-                currentLine.append(word)
+            if (fontMetrics.stringWidth(word) > maxWidth) {
+                // If a single word is too long, break it by characters
+                if (currentLine.isNotEmpty()) {
+                    lines.add(currentLine.toString())
+                    currentLine = StringBuilder()
+                }
+                var tempWord = word
+                while (tempWord.isNotEmpty()) {
+                    var i = 1
+                    while (i <= tempWord.length && fontMetrics.stringWidth(tempWord.substring(0, i)) <= maxWidth) {
+                        i++
+                    }
+                    // If the first character already exceeds maxWidth, just add it
+                    if (i == 1 && fontMetrics.stringWidth(tempWord.substring(0, 1)) > maxWidth) {
+                        lines.add(tempWord.substring(0, 1))
+                        tempWord = tempWord.substring(1)
+                    } else {
+                        lines.add(tempWord.substring(0, i - 1))
+                        tempWord = tempWord.substring(i - 1)
+                    }
+                }
             } else {
-                val potentialLine = "$currentLine $word"
+                val potentialLine = if (currentLine.isEmpty()) word else "$currentLine $word"
                 if (fontMetrics.stringWidth(potentialLine) <= maxWidth) {
-                    currentLine.append(" ").append(word)
+                    if (currentLine.isNotEmpty()) {
+                        currentLine.append(" ")
+                    }
+                    currentLine.append(word)
                 } else {
                     lines.add(currentLine.toString())
                     currentLine = StringBuilder(word)
