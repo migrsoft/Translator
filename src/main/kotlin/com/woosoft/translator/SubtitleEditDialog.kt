@@ -4,7 +4,7 @@ import java.awt.BorderLayout
 import java.awt.Dimension
 import javax.swing.*
 
-class SubtitleEditDialog(owner: JFrame, initialText: String, private val callback: (String) -> Unit) : JDialog(owner, "Edit Subtitle", true) {
+class SubtitleEditDialog(owner: JFrame, private val ocrText: String, private val translatedText: String, private val displayMode: SubtitleDisplayMode, private val callback: (String?, String?) -> Unit) : JDialog(owner, "Edit Subtitle", true) {
 
     private val subtitleTextArea: JTextArea
 
@@ -12,7 +12,11 @@ class SubtitleEditDialog(owner: JFrame, initialText: String, private val callbac
         layout = BorderLayout()
         preferredSize = Dimension(400, 200)
 
-        subtitleTextArea = JTextArea(initialText)
+        subtitleTextArea = JTextArea(when (displayMode) {
+            SubtitleDisplayMode.OCR -> ocrText
+            SubtitleDisplayMode.TRANSLATION -> translatedText
+            else -> "" // Should not happen, but handle NONE case
+        })
         subtitleTextArea.lineWrap = true
         subtitleTextArea.wrapStyleWord = true
         subtitleTextArea.font = subtitleTextArea.font.deriveFont(16f)
@@ -21,7 +25,11 @@ class SubtitleEditDialog(owner: JFrame, initialText: String, private val callbac
 
         val saveButton = JButton("Save")
         saveButton.addActionListener {
-            callback(subtitleTextArea.text)
+            when (displayMode) {
+                SubtitleDisplayMode.OCR -> callback(subtitleTextArea.text, null)
+                SubtitleDisplayMode.TRANSLATION -> callback(null, subtitleTextArea.text)
+                else -> {}
+            }
             dispose()
         }
         val cancelButton = JButton("Cancel")

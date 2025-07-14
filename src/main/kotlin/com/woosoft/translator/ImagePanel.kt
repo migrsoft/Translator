@@ -65,10 +65,13 @@ class ImagePanel(private val scrollPane: JScrollPane) : JPanel() {
                             val topFrame = SwingUtilities.getWindowAncestor(this@ImagePanel)
                             if (topFrame is JFrame) {
                                 val frameOwner = topFrame as JFrame
-                                val dialog = SubtitleEditDialog(frameOwner, clickedSubtitle.translatedText) { newText ->
+                                val dialog = SubtitleEditDialog(frameOwner, clickedSubtitle.ocrText, clickedSubtitle.translatedText, currentSubtitleDisplayMode) { newOcrText, newTranslatedText ->
                                     val index = subtitles.indexOf(clickedSubtitle)
                                     if (index != -1) {
-                                        subtitles[index] = clickedSubtitle.copy(translatedText = newText)
+                                        subtitles[index] = clickedSubtitle.copy(
+                                            ocrText = newOcrText ?: clickedSubtitle.ocrText,
+                                            translatedText = newTranslatedText ?: clickedSubtitle.translatedText
+                                        )
                                         repaint()
                                     }
                                 }
