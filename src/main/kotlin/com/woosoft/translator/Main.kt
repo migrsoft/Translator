@@ -281,6 +281,7 @@ fun createAndShowGUI() {
         val fileChooser = JFileChooser()
         fileChooser.dialogTitle = "Save Subtitles"
         fileChooser.fileFilter = FileNameExtensionFilter("Subtitle JSON Files", "json")
+        lastOpenedDirectory?.let { fileChooser.currentDirectory = it }
 
         if (currentCbzZipFile != null) {
             // For CBZ files, save all accumulated subtitles
