@@ -185,11 +185,9 @@ fun createAndShowGUI() {
         currentCbzZipFile?.close() // Close any previously opened CBZ file
         currentCbzZipFile = null
 
-        val fileChooser = JFileChooser()
+        val fileChooser = JFileChooser(System.getProperty("user.dir"))
         fileChooser.fileFilter = FileNameExtensionFilter("Image Files", "jpeg", "jpg", "png", "webp")
         fileChooser.isMultiSelectionEnabled = true // Enable multi-selection
-
-        lastOpenedDirectory?.let { fileChooser.currentDirectory = it }
 
         val result = fileChooser.showOpenDialog(frame)
         if (result == JFileChooser.APPROVE_OPTION) {
@@ -223,11 +221,9 @@ fun createAndShowGUI() {
         currentCbzZipFile?.close() // Close any previously opened CBZ file
         currentCbzZipFile = null
 
-        val fileChooser = JFileChooser()
+        val fileChooser = JFileChooser(System.getProperty("user.dir"))
         fileChooser.fileFilter = FileNameExtensionFilter("CBZ Files", "cbz")
         fileChooser.isMultiSelectionEnabled = false // Only allow single CBZ selection
-
-        lastOpenedDirectory?.let { fileChooser.currentDirectory = it }
 
         val result = fileChooser.showOpenDialog(frame)
         if (result == JFileChooser.APPROVE_OPTION) {
