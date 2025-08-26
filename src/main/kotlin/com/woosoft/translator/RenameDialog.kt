@@ -66,6 +66,7 @@ class RenameDialog(
                 dispose()
             }
         }
+        rootPane.defaultButton = renameButton
 
         val cancelButton = JButton("Cancel")
         cancelButton.addActionListener {
