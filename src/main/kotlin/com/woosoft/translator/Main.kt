@@ -57,6 +57,10 @@ fun createAndShowGUI() {
     fileMenu.add(openCbzMenuItem)
     val saveSubtitlesMenuItem = JMenuItem("Save Subtitles")
     fileMenu.add(saveSubtitlesMenuItem)
+    fileMenu.addSeparator()
+    val translateFileMenuItem = JMenuItem("Translate File")
+    fileMenu.add(translateFileMenuItem)
+    fileMenu.addSeparator()
     val exitMenuItem = JMenuItem("Exit")
     exitMenuItem.addActionListener { System.exit(0) }
     fileMenu.add(exitMenuItem)
@@ -339,6 +343,11 @@ fun createAndShowGUI() {
                 }
             }
         }
+    }
+
+    translateFileMenuItem.addActionListener {
+        val dialog = FileTranslationDialog(frame)
+        dialog.isVisible = true
     }
 
     // Add ListSelectionListener to fileList
