@@ -444,7 +444,7 @@ fun createAndShowGUI() {
                                     val newFileName = "${prefix}${String.format("%0${width}d", currentNumber)}.${extension}"
                                     val newFile = File(originalFile.parentFile, newFileName)
                                     if (originalFile.renameTo(newFile)) {
-                                        println("Renamed ${originalFile.name} to ${newFile.name}")
+//                                        println("Renamed ${originalFile.name} to ${newFile.name}")
                                         // Update the selectedFilesList
                                         selectedFilesList[selectedIndices[i]] = LocalFileImage(newFile)
                                     } else {
