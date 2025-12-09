@@ -25,8 +25,8 @@ object SubtitleManager {
     }
 
     fun saveCbzSubtitles(file: File, cbzSubtitleData: Map<String, List<SubtitleEntry>>) {
-        val subtitleMapForJson = cbzSubtitleData.mapValues { (_, subtitles) ->
-            subtitles.map { SubtitleFileEntry.fromSubtitleEntry(it) }
+        val subtitleMapForJson = cbzSubtitleData.entries.associate { (imageName, subtitles) ->
+            imageName to subtitles.map { SubtitleFileEntry.fromSubtitleEntry(it) }
         }
         val cbzData = CbzSubtitleData(subtitleMapForJson)
         val jsonString = gson.toJson(cbzData)
@@ -40,8 +40,8 @@ object SubtitleManager {
         val jsonString = file.readText()
         val type = object : TypeToken<CbzSubtitleData>() {}.type
         val cbzData: CbzSubtitleData = gson.fromJson(jsonString, type)
-        return cbzData.imageSubtitles.mapValues { (_, subtitleFileEntries) ->
-            subtitleFileEntries.map { it.toSubtitleEntry() }
+        return cbzData.imageSubtitles.entries.associate { (imageName, subtitleFileEntries) ->
+            imageName to subtitleFileEntries.map { it.toSubtitleEntry() }
         }
     }
 }

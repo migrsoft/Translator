@@ -12,6 +12,7 @@ import java.awt.event.ComponentEvent
 import java.util.zip.ZipFile
 import java.io.InputStream
 import java.util.zip.ZipEntry
+import com.woosoft.translator.NaturalOrderComparator
 
 private var lastOpenedDirectory: File? = null
 private var currentCbzZipFile: ZipFile? = null // To hold the currently open CBZ file
@@ -200,10 +201,11 @@ fun createAndShowGUI() {
             displayImage(null, ImageDisplayMode.FIT_TO_VIEW, imageDisplayScrollPane, imageSizeLabel) // Clear previous image
 
             val selectedFiles: Array<File> = fileChooser.selectedFiles
-            for (file in selectedFiles) {
-                val localFileImage = LocalFileImage(file)
-                fileListModel.addElement(localFileImage.name)
-                selectedFilesList.add(localFileImage)
+            val tempImages = selectedFiles.map { LocalFileImage(it) }.toMutableList()
+            tempImages.sortWith { a, b -> NaturalOrderComparator.compare(a.name, b.name) }
+            tempImages.forEach {
+                fileListModel.addElement(it.name)
+                selectedFilesList.add(it)
             }
             selectedFiles.firstOrNull()?.parentFile?.let { lastOpenedDirectory = it }
 
@@ -240,8 +242,6 @@ fun createAndShowGUI() {
                 try {
                     val zipFile = ZipFile(selectedCbzFile)
                     currentCbzZipFile = zipFile // Store the ZipFile
-                    currentCbzImageSubtitles.clear() // Clear previous CBZ subtitles
-
                     val entries = zipFile.entries()
                     val imageEntries = mutableListOf<CbzImage>()
                     while (entries.hasMoreElements()) {
@@ -251,7 +251,7 @@ fun createAndShowGUI() {
                         }
                     }
                     // Sort image entries by name
-                    imageEntries.sortBy { it.name }
+                    imageEntries.sortWith { a, b -> NaturalOrderComparator.compare(a.name, b.name) }
 
                     imageEntries.forEach { cbzImage ->
                         fileListModel.addElement(cbzImage.name)
@@ -269,9 +269,7 @@ fun createAndShowGUI() {
                     val subtitleFile = File(selectedCbzFile.parentFile, selectedCbzFile.nameWithoutExtension + ".json")
                     if (subtitleFile.exists()) {
                         val loadedCbzSubtitles = SubtitleManager.loadCbzSubtitles(subtitleFile)
-                        loadedCbzSubtitles.forEach { (imageName, subtitles) ->
-                            currentCbzImageSubtitles[imageName] = subtitles.toMutableList()
-                        }
+                        currentCbzImageSubtitles = loadedCbzSubtitles.mapValues { it.value.toMutableList() }.toMutableMap()
                         // Display subtitles for the first image if available
                         selectedFilesList.firstOrNull()?.name?.let { firstImageName ->
                             currentCbzImageSubtitles[firstImageName]?.let { subtitlesForFirstImage ->
@@ -279,6 +277,8 @@ fun createAndShowGUI() {
                                 subtitlesForFirstImage.forEach { getImagePanel().addSubtitle(it) }
                             }
                         }
+                    } else {
+                        currentCbzImageSubtitles.clear()
                     }
 
                 } catch (e: Exception) {
@@ -306,7 +306,8 @@ fun createAndShowGUI() {
             lastSelectedImageName?.let { prevImageName ->
                 currentCbzImageSubtitles[prevImageName] = getImagePanel().subtitles.toMutableList()
             }
-            val suggestedFileName = currentCbzZipFile!!.name.substringBeforeLast(".") + ".json"
+            val cbzName = File(currentCbzZipFile!!.name).name
+            val suggestedFileName = cbzName.substringBeforeLast(".") + ".json"
             fileChooser.selectedFile = File(lastOpenedDirectory, suggestedFileName)
 
             val result = fileChooser.showSaveDialog(frame)
@@ -327,8 +328,14 @@ fun createAndShowGUI() {
                 return@addActionListener
             }
 
-            val firstImageFile = (selectedFilesList[0] as LocalFileImage).file
-            val suggestedFileName = firstImageFile.nameWithoutExtension + ".json"
+            val selectedIndex = fileList.selectedIndex
+            if (selectedIndex == -1) {
+                JOptionPane.showMessageDialog(frame, "No image selected to save subtitles for.", "Save Subtitles", JOptionPane.INFORMATION_MESSAGE)
+                return@addActionListener
+            }
+
+            val selectedImageFile = (selectedFilesList[selectedIndex] as LocalFileImage).file
+            val suggestedFileName = selectedImageFile.nameWithoutExtension + ".json"
             fileChooser.selectedFile = File(lastOpenedDirectory, suggestedFileName)
 
             val result = fileChooser.showSaveDialog(frame)
@@ -369,8 +376,16 @@ fun createAndShowGUI() {
                         }
                         lastSelectedImageName = selectedDisplayableImage.name
                     } else {
-                        // For single image files, clear subtitles when switching images
-                        getImagePanel().subtitles.clear()
+                        // For single image files, load the corresponding subtitle file
+                        getImagePanel().subtitles.clear() // Clear previous subtitles first
+                        if (selectedDisplayableImage is LocalFileImage) {
+                            val imageFile = selectedDisplayableImage.file
+                            val subtitleFile = File(imageFile.parentFile, imageFile.nameWithoutExtension + ".json")
+                            if (subtitleFile.exists()) {
+                                val loadedSubtitles = SubtitleManager.loadSingleImageSubtitles(subtitleFile)
+                                loadedSubtitles.forEach { getImagePanel().addSubtitle(it) }
+                            }
+                        }
                     }
 
                     displayImage(selectedDisplayableImage, ImageDisplayMode.FIT_TO_WIDTH, imageDisplayScrollPane, imageSizeLabel)
@@ -388,8 +403,37 @@ fun createAndShowGUI() {
                     val allLocalFiles = selectedIndices.all { selectedFilesList[it] is LocalFileImage }
                     if (allLocalFiles) {
                         val popupMenu = JPopupMenu()
-                        val renameMenuItem = JMenuItem("Rename")
-                        renameMenuItem.addActionListener {
+
+                        if (selectedIndices.size == 1) {
+                            val renameMenuItem = JMenuItem("Rename")
+                            renameMenuItem.addActionListener {
+                                val selectedIndex = selectedIndices[0]
+                                val selectedLocalFile = selectedFilesList[selectedIndex] as LocalFileImage
+                                val originalFile = selectedLocalFile.file
+                                val newName = JOptionPane.showInputDialog(frame, "Enter new name for ${originalFile.name}", originalFile.name)
+                                if (!newName.isNullOrBlank() && newName != originalFile.name) {
+                                    val newFile = File(originalFile.parent, newName)
+                                    if (originalFile.renameTo(newFile)) {
+                                        selectedFilesList[selectedIndex] = LocalFileImage(newFile)
+                                        val currentSelectionName = newFile.name
+                                        fileListModel.clear()
+                                        selectedFilesList.sortWith { a, b -> NaturalOrderComparator.compare(a.name, b.name) }
+                                        selectedFilesList.forEach { fileListModel.addElement(it.name) }
+                                        val newIndex = selectedFilesList.indexOfFirst { it.name == currentSelectionName }
+                                        if (newIndex != -1) {
+                                            fileList.selectedIndex = newIndex
+                                            fileList.ensureIndexIsVisible(newIndex)
+                                        }
+                                    } else {
+                                        JOptionPane.showMessageDialog(frame, "Failed to rename ${originalFile.name}", "Rename Error", JOptionPane.ERROR_MESSAGE)
+                                    }
+                                }
+                            }
+                            popupMenu.add(renameMenuItem)
+                        }
+
+                        val batchRenameMenuItem = JMenuItem("Batch Rename")
+                        batchRenameMenuItem.addActionListener {
                             val renameDialog = RenameDialog(frame) { prefix, startNumber, width ->
                                 // Perform renaming logic here
                                 val selectedLocalFiles = selectedIndices.map { selectedFilesList[it] as LocalFileImage }
@@ -410,7 +454,7 @@ fun createAndShowGUI() {
                                 }
                                 // After renaming, clear and re-add all items to resort
                                 fileListModel.clear()
-                                selectedFilesList.sortBy { it.name }
+                                selectedFilesList.sortWith { a, b -> NaturalOrderComparator.compare(a.name, b.name) }
                                 selectedFilesList.forEach {
                                     fileListModel.addElement(it.name)
                                 }
@@ -421,7 +465,7 @@ fun createAndShowGUI() {
                             }
                             renameDialog.isVisible = true
                         }
-                        popupMenu.add(renameMenuItem)
+                        popupMenu.add(batchRenameMenuItem)
 
                         val deleteMenuItem = JMenuItem("Delete")
                         deleteMenuItem.addActionListener {
@@ -447,7 +491,7 @@ fun createAndShowGUI() {
                                     // Rebuild the list after deletion
                                     fileListModel.clear()
                                     selectedFilesList.removeAll(selectedLocalFiles)
-                                    selectedFilesList.sortBy { it.name }
+                                    selectedFilesList.sortWith { a, b -> NaturalOrderComparator.compare(a.name, b.name) }
                                     selectedFilesList.forEach {
                                         fileListModel.addElement(it.name)
                                     }
