@@ -2,17 +2,16 @@ package com.woosoft.translator
 
 import java.awt.BorderLayout
 import java.awt.Dimension
-import java.io.File
-import javax.swing.*
-import javax.swing.filechooser.FileNameExtensionFilter
-import javax.swing.event.ListSelectionEvent
-import javax.swing.event.ListSelectionListener
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
-import java.util.zip.ZipFile
+import java.io.File
 import java.io.InputStream
 import java.util.zip.ZipEntry
-import com.woosoft.translator.NaturalOrderComparator
+import java.util.zip.ZipFile
+import javax.swing.*
+import javax.swing.event.ListSelectionEvent
+import javax.swing.event.ListSelectionListener
+import javax.swing.filechooser.FileNameExtensionFilter
 
 private var lastOpenedDirectory: File? = null
 private var currentCbzZipFile: ZipFile? = null // To hold the currently open CBZ file
@@ -444,7 +443,7 @@ fun createAndShowGUI() {
                                     val newFileName = "${prefix}${String.format("%0${width}d", currentNumber)}.${extension}"
                                     val newFile = File(originalFile.parentFile, newFileName)
                                     if (originalFile.renameTo(newFile)) {
-//                                        println("Renamed ${originalFile.name} to ${newFile.name}")
+                                        // println("Renamed ${originalFile.name} to ${newFile.name}")
                                         // Update the selectedFilesList
                                         selectedFilesList[selectedIndices[i]] = LocalFileImage(newFile)
                                     } else {
@@ -481,7 +480,7 @@ fun createAndShowGUI() {
                                 var deletedCount = 0
                                 for (file in filesToDelete) {
                                     if (file.delete()) {
-                                        println("Deleted file: ${file.name}")
+                                        // println("Deleted file: ${file.name}")
                                         deletedCount++
                                     } else {
                                         JOptionPane.showMessageDialog(frame, "Failed to delete ${file.name}", "Delete Error", JOptionPane.ERROR_MESSAGE)
